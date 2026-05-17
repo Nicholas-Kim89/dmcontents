@@ -35,7 +35,7 @@ export default function AssetLibrary() {
   const fetchAssets = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch(`http://localhost:8000/assets?team_id=${currentTeam?.id}`, {
+      const res = await fetch(`/assets?team_id=${currentTeam?.id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -60,7 +60,7 @@ export default function AssetLibrary() {
     formData.append('file', file)
 
     try {
-      const res = await fetch('http://localhost:8000/assets/upload', {
+      const res = await fetch('/assets/upload', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -193,7 +193,7 @@ export default function AssetLibrary() {
                   >
                     <div className="aspect-[4/5] overflow-hidden bg-black/20">
                       <img 
-                        src={`http://localhost:8000${asset.file_url}`} 
+                        src={`${asset.file_url}`} 
                         alt={asset.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
@@ -205,7 +205,7 @@ export default function AssetLibrary() {
                         <span>{new Date(asset.created_at).toLocaleDateString()}</span>
                         <div className="flex gap-2">
                           <a
-                            href={`http://localhost:8000${asset.file_url}`}
+                            href={`${asset.file_url}`}
                             download={asset.name}
                             className="p-1.5 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
                           >
@@ -262,7 +262,7 @@ export default function AssetLibrary() {
                           <td className="px-6 py-4 text-sm text-white/50">{asset.created_by}</td>
                           <td className="px-6 py-4 text-right">
                             <a
-                              href={`http://localhost:8000${asset.file_url}`}
+                              href={`${asset.file_url}`}
                               download={asset.name}
                               className="inline-flex items-center gap-1.5 text-white/30 hover:text-primary transition-colors p-2 rounded-lg hover:bg-primary/10"
                             >

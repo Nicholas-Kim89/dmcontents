@@ -50,7 +50,7 @@ export function AuthPage() {
     setIsLoading(true)
     setMessage(null)
     try {
-      const res = await fetch('http://localhost:8000/auth/register', {
+      const res = await fetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: regId, name: regName, password: regPassword, department: regDepartment })
@@ -71,7 +71,7 @@ export function AuthPage() {
     setIsLoading(true)
     setMessage(null)
     try {
-      const res = await fetch('http://localhost:8000/auth/forgot-password', {
+      const res = await fetch('/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: forgotId })

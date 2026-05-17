@@ -35,7 +35,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onNewProject, isAdmin
     e.preventDefault()
     if (!newTeamName.trim() || !token) return
     try {
-      const res = await fetch('http://localhost:8000/teams', {
+      const res = await fetch('/teams', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

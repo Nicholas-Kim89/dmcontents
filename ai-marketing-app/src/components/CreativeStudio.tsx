@@ -510,7 +510,7 @@ export function CreativeStudio({ project, incomingImage, clearIncomingImage }: C
       let slotPrompts = [basePrompt];
       if (slotCount > 1) {
         try {
-          const varRes = await fetch('http://localhost:8000/prompt/variations', {
+          const varRes = await fetch('/prompt/variations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt: basePrompt, count: slotCount - 1 })
@@ -529,7 +529,7 @@ export function CreativeStudio({ project, incomingImage, clearIncomingImage }: C
         const currentPrompt = slotPrompts[idx] || basePrompt;
         
         try {
-          const response = await fetch('http://localhost:8000/generate', {
+          const response = await fetch('/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

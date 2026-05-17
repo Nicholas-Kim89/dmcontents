@@ -21,7 +21,7 @@ export function AdminPanel() {
   const fetchPending = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch('http://localhost:8000/admin/pending-users', {
+      const res = await fetch('/admin/pending-users', {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
@@ -39,7 +39,7 @@ export function AdminPanel() {
     setProcessingId(userId)
     setMessage(null)
     try {
-      const res = await fetch(`http://localhost:8000/admin/${action}/${userId}`, {
+      const res = await fetch(`/admin/${action}/${userId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       })

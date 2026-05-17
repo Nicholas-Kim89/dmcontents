@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchTeams = async (authToken: string) => {
     try {
-      const res = await fetch('http://localhost:8000/teams', {
+      const res = await fetch('/teams', {
         headers: { 'Authorization': `Bearer ${authToken}` }
       })
       if (res.ok) {
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const login = async (id: string, password: string) => {
-    const res = await fetch('http://localhost:8000/auth/login', {
+    const res = await fetch('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, password })

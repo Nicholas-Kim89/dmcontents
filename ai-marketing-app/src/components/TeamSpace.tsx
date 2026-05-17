@@ -46,10 +46,10 @@ export default function TeamSpace() {
     setIsLoading(true)
     try {
       const [projRes, memberRes] = await Promise.all([
-        fetch(`http://localhost:8000/projects?team_id=${currentTeam?.id}`, {
+        fetch(`/projects?team_id=${currentTeam?.id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch(`http://localhost:8000/teams/${currentTeam?.id}/members`, {
+        fetch(`/teams/${currentTeam?.id}/members`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ])
@@ -71,7 +71,7 @@ export default function TeamSpace() {
     }
     setIsSearching(true)
     try {
-      const res = await fetch(`http://localhost:8000/users/search?q=${encodeURIComponent(q)}`, {
+      const res = await fetch(`/users/search?q=${encodeURIComponent(q)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -87,7 +87,7 @@ export default function TeamSpace() {
 
   const handleInviteUser = async (userId: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/teams/${currentTeam?.id}/members`, {
+      const res = await fetch(`/teams/${currentTeam?.id}/members`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

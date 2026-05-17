@@ -120,7 +120,7 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
       if (currentTeam?.id) fd.append('team_id', currentTeam.id)
       rawFiles.forEach(f => fd.append('files', f))
       try {
-        await fetch('http://localhost:8000/campaign/upload', {
+        await fetch('/campaign/upload', {
           method: 'POST',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           body: fd
@@ -141,7 +141,7 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
       fd.append('google_search', useSearch.toString())
       if (project?.id) fd.append('project_id', project.id)
 
-      const res = await fetch('http://localhost:8000/campaign/generate', { method: 'POST', body: fd })
+      const res = await fetch('/campaign/generate', { method: 'POST', body: fd })
       if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Unknown error') }
 
       const data: CampaignResult = await res.json()
@@ -152,7 +152,7 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
       const generated: GeneratedImage[] = []
       for (let i = 0; i < data.image_prompts.length; i++) {
         try {
-          const imgRes = await fetch('http://localhost:8000/generate', {
+          const imgRes = await fetch('/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -205,7 +205,7 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
       if (currentTeam?.id) fd.append('team_id', currentTeam.id)
       rawFiles.forEach(f => fd.append('files', f))
       try {
-        await fetch('http://localhost:8000/campaign/upload', {
+        await fetch('/campaign/upload', {
           method: 'POST',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           body: fd
@@ -215,7 +215,7 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
     }
 
     try {
-      const res = await fetch('http://localhost:8000/campaign/chat', {
+      const res = await fetch('/campaign/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

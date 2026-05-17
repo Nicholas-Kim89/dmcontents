@@ -36,7 +36,7 @@ export function NewProjectModal({ onClose, onCreated }: NewProjectModalProps) {
     setIsSearching(true)
     searchRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`http://localhost:8000/users/search?q=${encodeURIComponent(memberQuery)}`, {
+        const res = await fetch(`/users/search?q=${encodeURIComponent(memberQuery)}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
         const data = await res.json()
@@ -66,7 +66,7 @@ export function NewProjectModal({ onClose, onCreated }: NewProjectModalProps) {
     setIsCreating(true)
     setError('')
     try {
-      const res = await fetch('http://localhost:8000/projects', {
+      const res = await fetch('/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({

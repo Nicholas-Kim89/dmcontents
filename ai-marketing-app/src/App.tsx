@@ -37,7 +37,7 @@ function AppContent() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/projects?team_id=${currentTeam?.id}`, {
+      const res = await fetch(`/projects?team_id=${currentTeam?.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
