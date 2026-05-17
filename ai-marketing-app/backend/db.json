@@ -1,0 +1,203 @@
+{
+  "users": [
+    {
+      "id": "kimeunyong",
+      "name": "김은용",
+      "email": "kimeunyong@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$SAkhRAihdA6BEILQmlOq9Q$pGN9rXtAA.gPv96vMCta/sbBso2oQfw/F/nQ4.z/8cM",
+      "department": "경영AX담당.경영혁신AX팀",
+      "role": "admin",
+      "status": "approved",
+      "created_at": "2026-01-01 00:00:00"
+    },
+    {
+      "id": "leeminho1",
+      "name": "이민호",
+      "email": "leeminho1@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$hXCu1RrDuJcyRijl/B8DgA$uVeq3z3qUutstalqn8CBH4ZZeZ9z8QlHEcBfuio.hXE",
+      "department": "R&D센터.AI선행연구팀",
+      "role": "user",
+      "status": "approved",
+      "created_at": "2026-05-17 00:50:38"
+    },
+    {
+      "id": "leeminho2",
+      "name": "이민호",
+      "email": "leeminho2@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$YyzlXOt9r5Vy7p1z7r13bg$x5BfPHU54c3MEQATJ/YDaoSqidu9UkmdX6MUl9HDTao",
+      "department": "경영지원담당.인사기획팀",
+      "role": "user",
+      "status": "approved",
+      "created_at": "2026-05-17 00:50:38"
+    },
+    {
+      "id": "kimjiwon",
+      "name": "김지원",
+      "email": "kimjiwon@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$ZUzpnVOKce79HyOk9P4/Jw$FPq0U58Q0fTPwDT3YhSQUKHmC9XetQwGxXWIHgX2bKE",
+      "department": "마케팅담당.디지털마케팅팀",
+      "role": "user",
+      "status": "approved",
+      "created_at": "2026-05-17 00:50:38"
+    },
+    {
+      "id": "parkseojun",
+      "name": "박서준",
+      "email": "parkseojun@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$gtDa.5.z9n4PoRSilFKKEQ$Ts5XMkGmkFXvTkemfDIBoMMSBLJY.olGMMxXKQSXaok",
+      "department": "영업본부.국내영업1팀",
+      "role": "user",
+      "status": "approved",
+      "created_at": "2026-05-17 00:50:38"
+    },
+    {
+      "id": "choiwooshik",
+      "name": "최우식",
+      "email": "choiwooshik@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$lBKCsHbOeW9NaQ0hxFiLMQ$so3kHjxQmYBs6mGRIQZtX4snQ9u3tt/7OwZkvpV/IKM",
+      "department": "전략기획실.신사업기획팀",
+      "role": "user",
+      "status": "approved",
+      "created_at": "2026-05-17 00:50:38"
+    },
+    {
+      "id": "jungyumi",
+      "name": "정유미",
+      "email": "jungyumi@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$XWttrbX2nrOWUmqNkTImRA$oXPmzm8Si47/2jyy8q4lAYq7A6dyfWA77QVOMB2ncY8",
+      "department": "디자인센터.UX/UI팀",
+      "role": "user",
+      "status": "approved",
+      "created_at": "2026-05-17 00:50:38"
+    },
+    {
+      "id": "gongyoo",
+      "name": "공유",
+      "email": "gongyoo@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$1VrLmVNKqXUuZQwBAOCccw$CJQW2bStY3uJBXk6ze8mbRLwWFZbtNJrBdGqjaE2uls",
+      "department": "PR기획팀.미디어홍보1팀",
+      "role": "user",
+      "status": "approved",
+      "created_at": "2026-05-17 00:50:38"
+    },
+    {
+      "id": "suzy",
+      "name": "배수지",
+      "email": "suzy@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$ZMw5pxTi3FuLkfIewxgjZA$9NOi8TUM6WsMUXmJNzLfYsDDjbmndWK4Ef6H3m2pd9s",
+      "department": "글로벌영업본부.해외영업팀",
+      "role": "user",
+      "status": "approved",
+      "created_at": "2026-05-17 00:50:38"
+    },
+    {
+      "id": "iu",
+      "name": "이지은",
+      "email": "iu@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$Z8wZA2BsbU3pvVfq/R.jdA$elWTdGVUcrkPEeYs7IyvuPMkBlykIicDVaY37ueBvgc",
+      "department": "경영AX담당.데이터분석팀",
+      "role": "user",
+      "status": "approved",
+      "created_at": "2026-05-17 00:50:38"
+    },
+    {
+      "id": "parkbogeum",
+      "name": "박보검",
+      "email": "parkbogeum@lgchem.com",
+      "password_hash": "$pbkdf2-sha256$29000$3/u/N4ZwzjnnnLOWkvIeAw$F4EUYAxxo5kR4LPhL2uJvQmQHjk16MA.u0rT.QJ0wkM",
+      "department": "생산기술센터.자동화설비팀",
+      "role": "user",
+      "status": "approved",
+      "created_at": "2026-05-17 00:50:38"
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj-1",
+      "name": "Q3 Campaign Sprint",
+      "description": "Q3 마케팅 스프린트",
+      "type": "Marketing Strategy",
+      "created_at": "2026-05-15 10:00:00",
+      "created_by": "kimeunyong",
+      "members": [],
+      "team_id": "team-default"
+    },
+    {
+      "id": "proj-2",
+      "name": "Neural Brand Voice",
+      "description": "AI 브랜드 보이스 튜닝",
+      "type": "AI Tuning",
+      "created_at": "2026-05-14 15:30:00",
+      "created_by": "kimeunyong",
+      "members": [],
+      "team_id": "team-default"
+    }
+  ],
+  "teams": [
+    {
+      "id": "team-default",
+      "name": "공통 워크스페이스",
+      "description": "기본 팀 공간입니다.",
+      "created_at": "2026-01-01 00:00:00",
+      "created_by": "system"
+    }
+  ],
+  "team_members": [
+    {
+      "team_id": "team-default",
+      "user_id": "kimeunyong",
+      "role": "OWNER"
+    },
+    {
+      "team_id": "team-default",
+      "user_id": "leeminho1",
+      "role": "EDITOR"
+    },
+    {
+      "team_id": "team-default",
+      "user_id": "leeminho2",
+      "role": "EDITOR"
+    },
+    {
+      "team_id": "team-default",
+      "user_id": "kimjiwon",
+      "role": "EDITOR"
+    },
+    {
+      "team_id": "team-default",
+      "user_id": "parkseojun",
+      "role": "EDITOR"
+    },
+    {
+      "team_id": "team-default",
+      "user_id": "choiwooshik",
+      "role": "EDITOR"
+    },
+    {
+      "team_id": "team-default",
+      "user_id": "jungyumi",
+      "role": "EDITOR"
+    },
+    {
+      "team_id": "team-default",
+      "user_id": "gongyoo",
+      "role": "EDITOR"
+    },
+    {
+      "team_id": "team-default",
+      "user_id": "suzy",
+      "role": "EDITOR"
+    },
+    {
+      "team_id": "team-default",
+      "user_id": "iu",
+      "role": "EDITOR"
+    },
+    {
+      "team_id": "team-default",
+      "user_id": "parkbogeum",
+      "role": "EDITOR"
+    }
+  ],
+  "assets": []
+}

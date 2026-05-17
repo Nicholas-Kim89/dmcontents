@@ -1,0 +1,15 @@
+google-genai
+fastapi
+uvicorn
+pillow
+python-dotenv
+langchain
+langchain-google-genai
+langgraph
+python-pptx
+python-docx
+pypdf
+python-multipart
+passlib[bcrypt]
+python-jose[cryptography]
+aiosmtplib

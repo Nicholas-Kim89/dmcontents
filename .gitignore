@@ -1,3 +1,27 @@
-dist
-node_modules
-gen
+# Dependency directories
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Python caches and virtual environments
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# App logs
+*.log
+backend/*.log
+ai-marketing-app/backend/*.log
+error.log
+out.log
+
+# User uploaded assets
+backend/storage/assets/*
+ai-marketing-app/backend/storage/assets/*
+
+# OS generated files
+.DS_Store
+Thumbs.db

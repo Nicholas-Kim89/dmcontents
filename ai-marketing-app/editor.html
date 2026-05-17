@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Synthetix AI - Creative Studio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@500&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-container": "#a078ff",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed": "#131b2e",
+                        "on-error": "#690005",
+                        "surface-bright": "#2a3a4f",
+                        "surface-container-high": "#1b2b3f",
+                        "on-secondary-container": "#e6ecff",
+                        "error-container": "#93000a",
+                        "on-primary-fixed-variant": "#5516be",
+                        "tertiary-fixed-dim": "#bec6e0",
+                        "on-secondary-fixed": "#001a42",
+                        "on-surface-variant": "#cbc3d7",
+                        "on-primary": "#3c0091",
+                        "surface-tint": "#d0bcff",
+                        "secondary": "#adc6ff",
+                        "surface": "#031427",
+                        "tertiary-container": "#8990a8",
+                        "surface-container-lowest": "#000f21",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "inverse-on-surface": "#213145",
+                        "on-surface": "#d3e4fe",
+                        "surface-container-highest": "#26364a",
+                        "surface-dim": "#031427",
+                        "primary": "#d0bcff",
+                        "tertiary-fixed": "#dae2fd",
+                        "background": "#031427",
+                        "on-background": "#d3e4fe",
+                        "surface-container": "#102034",
+                        "outline-variant": "#494454",
+                        "on-primary-container": "#340080",
+                        "on-secondary": "#002e6a",
+                        "on-tertiary-fixed-variant": "#3f465c",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-tertiary": "#283044",
+                        "primary-fixed": "#e9ddff",
+                        "tertiary": "#bec6e0",
+                        "secondary-container": "#0566d9",
+                        "surface-container-low": "#0b1c30",
+                        "surface-variant": "#26364a",
+                        "primary-fixed-dim": "#d0bcff",
+                        "inverse-primary": "#6d3bd7",
+                        "on-secondary-fixed-variant": "#004395",
+                        "on-primary-fixed": "#23005c",
+                        "outline": "#958ea0",
+                        "on-tertiary-container": "#22293d",
+                        "inverse-surface": "#d3e4fe"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "margin-desktop": "32px",
+                        "action-bar-height": "80px",
+                        "sidebar-width": "280px",
+                        "unit": "4px",
+                        "gutter": "24px",
+                        "margin-mobile": "16px"
+                    },
+                    fontFamily: {
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "label-md": ["Geist"],
+                        "code": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    fontSize: {
+                        "headline-md": ["20px", { lineHeight: "28px", letterSpacing: "0.01em", fontWeight: "600" }],
+                        "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "0.01em", fontWeight: "600" }],
+                        "label-md": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "500" }],
+                        "code": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "headline-lg-mobile": ["24px", { lineHeight: "32px", letterSpacing: "0.01em", fontWeight: "600" }],
+                        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+                        "body-sm": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "0.02em", fontWeight: "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom scrollbar for property panel */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #494454;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #958ea0;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background h-screen w-screen overflow-hidden flex font-body-md">
+<!-- SideNavBar (Shared Component) -->
+<nav class="bg-surface-container-low dark:bg-surface-container-lowest fixed left-0 top-0 h-full w-sidebar-width border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.3)] flex flex-col py-6 gap-2 z-50">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-container to-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container text-xl icon-fill" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-black text-primary">Synthetix AI</h1>
+<p class="font-label-md text-label-md text-on-surface-variant">Enterprise Suite</p>
+</div>
+</div>
+<div class="px-4 mb-4">
+<button class="w-full bg-primary-container text-on-primary-container hover:bg-primary transition-colors duration-300 font-label-md text-label-md rounded-lg py-3 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(160,120,255,0.2)]">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                New Project
+            </button>
+</div>
+<div class="flex-1 flex flex-col gap-1 px-2">
+<!-- Dashboard (Inactive) -->
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 hover:text-on-surface transition-all duration-300 font-label-md text-label-md group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform duration-300" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<!-- Creative Studio (Active) -->
+<a class="bg-primary-container/10 text-primary-container border-r-2 border-primary-container flex items-center gap-3 px-4 py-3 rounded-lg font-label-md text-label-md group" href="#">
+<span class="material-symbols-outlined icon-fill group-hover:translate-x-1 transition-transform duration-300" data-icon="auto_fix">auto_fix</span>
+                Creative Studio
+            </a>
+<!-- Documents (Inactive) -->
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 hover:text-on-surface transition-all duration-300 font-label-md text-label-md group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform duration-300" data-icon="description">description</span>
+                Documents
+            </a>
+<!-- Asset Library (Inactive) -->
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 hover:text-on-surface transition-all duration-300 font-label-md text-label-md group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform duration-300" data-icon="folder_shared">folder_shared</span>
+                Asset Library
+            </a>
+</div>
+<div class="mt-auto flex flex-col gap-1 px-2 pt-4 border-t border-white/5">
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 hover:text-on-surface transition-all duration-300 font-label-md text-label-md group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform duration-300" data-icon="settings">settings</span>
+                Settings
+            </a>
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 hover:text-on-surface transition-all duration-300 font-label-md text-label-md group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform duration-300" data-icon="help">help</span>
+                Help
+            </a>
+</div>
+</nav>
+<!-- Main Workspace Container -->
+<div class="ml-[280px] flex-1 flex flex-col relative w-[calc(100%-280px)]">
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-surface/80 dark:bg-surface/80 backdrop-blur-xl docked full-width top-0 border-b border-white/10 shadow-sm flex justify-between items-center px-margin-desktop h-action-bar-height w-full z-40 shrink-0">
+<div class="flex items-center gap-4">
+<h2 class="font-headline-md text-headline-md font-bold tracking-tight text-primary-container">Synthetix AI</h2>
+<div class="h-4 w-px bg-white/10 mx-2"></div>
+<!-- Contextual Breadcrumbs placed here for integration -->
+<nav class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface-variant">
+<a class="hover:text-primary transition-colors" href="#">Project Hub</a>
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface font-medium">Summer Campaign 2024</span>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<!-- Search suppressed for focused editor view, keeping trailing icons -->
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant font-medium hover:text-primary transition-colors duration-200 hover:opacity-80 active:scale-95">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant font-medium hover:text-primary transition-colors duration-200 hover:opacity-80 active:scale-95">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</button>
+<button class="text-on-surface-variant font-medium hover:text-primary transition-colors duration-200 hover:opacity-80 active:scale-95">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Editor Workspace (Canvas + Panels) -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Inner Left Toolbar (Tools) -->
+<div class="w-16 bg-surface-container border-r border-white/5 flex flex-col items-center py-4 gap-2 shrink-0 z-30 shadow-[4px_0_24px_rgba(0,0,0,0.1)]">
+<button class="w-10 h-10 rounded-lg bg-primary-container/10 text-primary-container flex items-center justify-center relative group transition-all duration-200 shadow-[0_0_15px_rgba(160,120,255,0.15)]">
+<span class="material-symbols-outlined icon-fill" data-icon="arrow_selector_tool">arrow_selector_tool</span>
+<div class="absolute left-14 bg-surface-container-highest text-on-surface px-2 py-1 rounded font-label-md text-label-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">Select</div>
+</button>
+<div class="w-8 h-px bg-white/10 my-1"></div>
+<button class="w-10 h-10 rounded-lg text-on-surface-variant hover:bg-white/5 hover:text-on-surface flex items-center justify-center relative group transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="brush">brush</span>
+<div class="absolute left-14 bg-surface-container-highest text-on-surface px-2 py-1 rounded font-label-md text-label-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">Brush (In-paint)</div>
+</button>
+<button class="w-10 h-10 rounded-lg text-on-surface-variant hover:bg-white/5 hover:text-on-surface flex items-center justify-center relative group transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="lasso_select">lasso_select</span>
+<div class="absolute left-14 bg-surface-container-highest text-on-surface px-2 py-1 rounded font-label-md text-label-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">Lasso (Out-paint)</div>
+</button>
+<button class="w-10 h-10 rounded-lg text-on-surface-variant hover:bg-white/5 hover:text-on-surface flex items-center justify-center relative group transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="ink_eraser">ink_eraser</span>
+<div class="absolute left-14 bg-surface-container-highest text-on-surface px-2 py-1 rounded font-label-md text-label-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">Eraser</div>
+</button>
+<button class="w-10 h-10 rounded-lg text-on-surface-variant hover:bg-white/5 hover:text-on-surface flex items-center justify-center relative group transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="title">title</span>
+<div class="absolute left-14 bg-surface-container-highest text-on-surface px-2 py-1 rounded font-label-md text-label-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">Text</div>
+</button>
+<div class="mt-auto mb-2">
+<button class="w-10 h-10 rounded-lg text-on-surface-variant hover:bg-white/5 hover:text-on-surface flex items-center justify-center relative group transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="layers">layers</span>
+<div class="absolute left-14 bg-surface-container-highest text-on-surface px-2 py-1 rounded font-label-md text-label-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">Layers</div>
+</button>
+</div>
+</div>
+<!-- Center Canvas Area -->
+<div class="flex-1 bg-surface-container-lowest relative flex items-center justify-center overflow-hidden bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]">
+<!-- The Canvas / Generated Image Container -->
+<div class="relative w-full max-w-4xl aspect-[16/9] mx-12 shadow-[0_0_40px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden border border-white/10 group">
+<!-- Image -->
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A highly detailed, modern high-tech marketing image depicting a glowing, abstract neon wave structure against a deep, dark studio background. The lighting is dramatic and cinematic, emphasizing vibrant electric blue and creative purple hues reflecting off sleek, metallic surfaces. The composition implies forward motion and infinite possibility, perfectly suited for an enterprise AI platform's hero section." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAP7aG2F-TRlfiiveUzOHzbzxdQCd3F2yCF-K1nS7scMT9U0noZW_MDSLtvONScMRCInapHG5_UTXhFHjRPc0OPwGb_xJ98-AKshb9lLdqrNMiKig6Qxy-a4uf3IuwfIoFXGUQWsDSm1iGrKzYMM_AmYcOTG3WPnevyCz3Iwd6Oepw6-WksDVVBV3E3cVpKj9FmgT2Y4P0bmIteRGgXD3gXCFAFCe6_jMdUsTdmVPW91fnDL4dJWRaKybMAPS8DB5DCyJeGmYMcpfc');">
+</div>
+<!-- Overlays / UI on canvas -->
+<div class="absolute top-4 right-4 bg-surface-container-high/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary-container shadow-[0_0_8px_rgba(160,120,255,0.8)] animate-pulse"></div>
+<span class="font-label-md text-label-md text-on-surface">1024 x 576</span>
+</div>
+<!-- Selection/Transform box mock -->
+<div class="absolute inset-[10%] border border-primary-container/50 hidden group-hover:block pointer-events-none">
+<div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-surface border border-primary-container rounded-sm"></div>
+<div class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-surface border border-primary-container rounded-sm"></div>
+<div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-surface border border-primary-container rounded-sm"></div>
+<div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-surface border border-primary-container rounded-sm"></div>
+</div>
+</div>
+<!-- Floating Prompt & Action Bar -->
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-3xl z-40 px-4">
+<div class="bg-surface-container-high/80 dark:bg-surface-container-high/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.4),0_0_20px_rgba(160,120,255,0.1)] p-2 flex flex-col gap-2 transition-all duration-300 focus-within:shadow-[0_16px_40px_rgba(0,0,0,0.5),0_0_30px_rgba(160,120,255,0.2)] focus-within:border-primary-container/30">
+<div class="flex items-end gap-2">
+<!-- Reference Image Upload -->
+<button class="w-12 h-12 shrink-0 rounded-xl bg-surface border border-white/5 flex items-center justify-center text-on-surface-variant hover:text-primary-container hover:bg-white/5 hover:border-primary-container/30 transition-all cursor-pointer group relative">
+<span class="material-symbols-outlined" data-icon="add_photo_alternate">add_photo_alternate</span>
+<div class="absolute -top-8 bg-surface-container-highest text-on-surface px-2 py-1 rounded font-label-md text-label-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">Add Reference</div>
+</button>
+<!-- Prompt Input -->
+<div class="flex-1 bg-surface/50 rounded-xl border border-white/5 focus-within:border-primary/50 focus-within:bg-surface relative flex items-center">
+<textarea class="w-full bg-transparent border-none focus:ring-0 text-on-surface font-body-md placeholder-on-surface-variant/50 resize-none py-3 px-4 h-12 max-h-32 overflow-y-auto" placeholder="Describe what you want to create or edit..."></textarea>
+<div class="absolute right-3 text-on-surface-variant opacity-50 font-label-md text-label-md pointer-events-none">
+<span class="material-symbols-outlined text-sm align-middle" data-icon="auto_awesome">auto_awesome</span>
+</div>
+</div>
+<!-- Generate Button -->
+<button class="h-12 px-6 rounded-xl bg-gradient-to-r from-[#a078ff] to-[#adc6ff] text-on-primary-fixed hover:opacity-90 transition-all font-label-md text-label-md font-semibold tracking-wide flex items-center gap-2 shadow-[0_0_20px_rgba(160,120,255,0.3)] shrink-0">
+<span class="material-symbols-outlined text-lg" data-icon="temp_preferences_custom">temp_preferences_custom</span>
+                                Generate
+                            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Property Panel -->
+<div class="w-80 bg-surface-container border-l border-white/5 flex flex-col shrink-0 z-30 shadow-[-4px_0_24px_rgba(0,0,0,0.1)] overflow-y-auto">
+<div class="p-5 border-b border-white/5 flex items-center justify-between sticky top-0 bg-surface-container/90 backdrop-blur-md z-10">
+<h3 class="font-headline-md text-headline-md text-on-surface">Properties</h3>
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-sm" data-icon="more_horiz">more_horiz</span></button>
+</div>
+<div class="p-5 flex flex-col gap-8">
+<!-- Style Presets -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<label class="font-label-md text-label-md text-on-surface-variant">Style Presets</label>
+<button class="text-primary-container font-label-md text-label-md hover:underline">View All</button>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="relative rounded-lg overflow-hidden border-2 border-primary-container aspect-square cursor-pointer group">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A macro photograph of an eye, representing a photorealistic style preset for AI generation." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBpIZh_Q4lhy3h8ZEC0NjTlM9AsCWpOKXarV35Q1aLG7WUQNx6QlyS2nNEwcEzgfxq0IQaQRRQ4fy007krS4Xl7wEMXqJnAXHeEfr4rQ5CSWv9z4IYz5iENlMdcNVBB124txJqsRXNdUf17zInx4wjo6mmQkXAmwpBLK0IvzappEj9TslWLZJTddE7um5ZHZeX0w541hdo0x4vgCLrFIreeCMm6YMelqJgb2yRook5V9L5Q8DDeOo7mXKuJ3JMo0iZonI6zAk5CkIg');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-80"></div>
+<span class="absolute bottom-1 left-1.5 font-label-md text-[10px] text-white font-medium z-10">Photoreal</span>
+<div class="absolute top-1 right-1 w-3 h-3 bg-primary-container rounded-full border border-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-[8px] text-on-primary-container icon-fill" data-icon="check">check</span>
+</div>
+</div>
+<div class="relative rounded-lg overflow-hidden border border-white/10 hover:border-white/30 aspect-square cursor-pointer group transition-colors">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A colorful, expressive abstract painting, representing an artistic style preset for AI generation." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAaaVzKnV8DsvZbSEmmMdfy9N6ExJC6Va7hiCgxyp9o70f7Y-gOJu3lOB4cKBOXIiXzXaoNtPXSwfnzmVFnzv2VzTXzw6L5fxU98Vv9ojsHnrV6SZjZMcIBNw0FcgblZ91JcKRIzFc7Sak6T9ATTQzOuLKlGheYxp8MAM_KIn7vWVFRGCQJ3aR90PpWLOSK0Tu9xJ9ATk6ojPzpbHyqDOmR3lgFj96lpK8wOBbsVmokGR5bs9XH1Ggqy27julysAJvVWRx0zpGnNKQ');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+<span class="absolute bottom-1 left-1.5 font-label-md text-[10px] text-white font-medium z-10">Art</span>
+</div>
+<div class="relative rounded-lg overflow-hidden border border-white/10 hover:border-white/30 aspect-square cursor-pointer group transition-colors">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A clean, minimalist 3D graphic rendering, representing a graphic design style preset for AI generation." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBYBWnUtcX-cQ2-YpFPILK0ijQfYxhc45cJjBj7kA3gNZAG2YVvMub7h0H9-Vb4sIjvrSRZf7AKtwGTFVsnBitud99fIMTc-rBaMx0FXSxq1OGLMWegoEqvQ2gG_p84QttHjJIAQMvlA-60uQlCfCVhavgMlFzqlRY7BbYCa5F-XVwT7VJ7uUPlvK1lJGM7yh-9CaSAR9F_4wBWVMOAbMagchyvQbZvNqFju9U-aJdiZiTf67rCsG8lq9BkgVHtusXLqwPiFXFhzPc');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+<span class="absolute bottom-1 left-1.5 font-label-md text-[10px] text-white font-medium z-10">Graphic</span>
+</div>
+</div>
+</div>
+<!-- Aspect Ratio -->
+<div class="flex flex-col gap-3">
+<label class="font-label-md text-label-md text-on-surface-variant">Aspect Ratio</label>
+<div class="flex bg-surface rounded-lg p-1 border border-white/5">
+<button class="flex-1 py-1.5 rounded-md font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="crop_square">crop_square</span>
+                                1:1
+                            </button>
+<button class="flex-1 py-1.5 rounded-md bg-surface-container-highest shadow-sm font-label-md text-label-md text-on-surface flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="crop_16_9">crop_16_9</span>
+                                16:9
+                            </button>
+<button class="flex-1 py-1.5 rounded-md font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="crop_7_5">crop_7_5</span>
+                                4:3
+                            </button>
+</div>
+</div>
+<!-- Prompt Strength Slider -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<label class="font-label-md text-label-md text-on-surface-variant">Prompt Strength</label>
+<span class="font-code text-code text-on-surface bg-surface px-1.5 py-0.5 rounded border border-white/5">85%</span>
+</div>
+<div class="relative w-full h-1.5 bg-surface-bright rounded-full">
+<div class="absolute top-0 left-0 h-full bg-primary-container rounded-full" style="width: 85%;"></div>
+<div class="absolute top-1/2 left-[85%] -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-[0_0_10px_rgba(160,120,255,0.5)] cursor-pointer"></div>
+</div>
+</div>
+<!-- Variation Slider -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<label class="font-label-md text-label-md text-on-surface-variant">Variation</label>
+<span class="font-code text-code text-on-surface bg-surface px-1.5 py-0.5 rounded border border-white/5">Low</span>
+</div>
+<div class="relative w-full h-1.5 bg-surface-bright rounded-full">
+<div class="absolute top-0 left-0 h-full bg-secondary rounded-full" style="width: 25%;"></div>
+<div class="absolute top-1/2 left-[25%] -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-sm cursor-pointer"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>
