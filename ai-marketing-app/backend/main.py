@@ -802,6 +802,8 @@ from fastapi.responses import FileResponse
 
 DIST_DIR = BASE_DIR.parent / "dist"
 
+logger.info(f"Checking frontend static files path: {DIST_DIR} | exists: {DIST_DIR.exists()}")
+
 if DIST_DIR.exists():
     app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="frontend")
     
