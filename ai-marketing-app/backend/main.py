@@ -797,6 +797,18 @@ async def campaign_chat(req: ChatRequest):
         logger.exception("Chat generation error")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ─── Frontend Static Files Serve ───────────────────────────
+from fastapi.responses import FileResponse
+
+DIST_DIR = BASE_DIR.parent / "dist"
+
+if DIST_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="frontend")
+    
+    @app.exception_handler(404)
+    async def custom_404_handler(request, exc):
+        return FileResponse(str(DIST_DIR / "index.html"))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
