@@ -12,15 +12,15 @@ import {
 // -----------------------------------------------------------------------
 const IMAGE_MODELS = [
   { id: 'gemini-3.1-flash-image-preview', name: 'Nano Banana 2', type: 'Gemini' },
-  { id: 'gemini-3-pro-image-preview',     name: 'Nano Banana Pro', type: 'Gemini' },
-  { id: 'gemini-2.5-flash-image',         name: 'Nano Banana', type: 'Gemini' },
-  { id: 'imagen-4.0-ultra-generate-001',  name: 'Imagen 4.0 Ultra', type: 'Imagen' },
-  { id: 'imagen-4.0-generate-001',        name: 'Imagen 4.0 Standard', type: 'Imagen' },
+  { id: 'gemini-3-pro-image-preview', name: 'Nano Banana Pro', type: 'Gemini' },
+  { id: 'gemini-2.5-flash-image', name: 'Nano Banana', type: 'Gemini' },
+  { id: 'imagen-4.0-ultra-generate-001', name: 'Imagen 4.0 Ultra', type: 'Imagen' },
+  { id: 'imagen-4.0-generate-001', name: 'Imagen 4.0 Standard', type: 'Imagen' },
 ]
 
-const GEMINI_RATIOS  = ['1:1', '16:9', '9:16', '21:9', '4:3', '3:4', '2:3', '3:2']
-const IMAGEN_RATIOS  = ['1:1', '16:9', '9:16', '4:3', '3:4']
-const RESOLUTIONS    = ['512', '1K', '2K', '4K']
+const GEMINI_RATIOS = ['1:1', '16:9', '9:16', '21:9', '4:3', '3:4', '2:3', '3:2']
+const IMAGEN_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4']
+const RESOLUTIONS = ['512', '1K', '2K', '4K']
 
 // -----------------------------------------------------------------------
 // Types
@@ -50,34 +50,44 @@ interface CampaignStudioProps {
 export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps) {
   const { token, currentTeam } = useAuth()
   // File state
-  const [files, setFiles]       = useState<UploadedFile[]>([])
+  const [files, setFiles] = useState<UploadedFile[]>([])
   const [rawFiles, setRawFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [sessionId]  = useState(() => crypto.randomUUID())
+  const [sessionId] = useState(() => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID()
+    }
+    // HTTPS가 아닌 비보안 HTTP 환경에서도 동작하는 표준 UUID v4 생성 Fallback
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0
+      const v = c === 'x' ? r : (r & 0x3 | 0x8)
+      return v.toString(16)
+    })
+  })
 
   // Brief
   const [prompt, setPrompt] = useState('')
 
   // Image model settings
   const [selectedModel, setSelectedModel] = useState(IMAGE_MODELS[0])
-  const [aspectRatio, setAspectRatio]     = useState('16:9')
-  const [resolution, setResolution]       = useState('1K')
+  const [aspectRatio, setAspectRatio] = useState('16:9')
+  const [resolution, setResolution] = useState('1K')
 
   // Pipeline state
-  const [stage, setStage]         = useState<AgentStage>('idle')
-  const [result, setResult]       = useState<CampaignResult | null>(null)
-  const [images, setImages]       = useState<GeneratedImage[]>([])
-  const [error, setError]         = useState<string | null>(null)
+  const [stage, setStage] = useState<AgentStage>('idle')
+  const [result, setResult] = useState<CampaignResult | null>(null)
+  const [images, setImages] = useState<GeneratedImage[]>([])
+  const [error, setError] = useState<string | null>(null)
   const [expandedSection, setExpandedSection] = useState<string | null>('images')
 
   // Mode & Chat state
-  const [mode, setMode]                   = useState<Mode>('multi-agent')
-  const [chatMessages, setChatMessages]   = useState<ChatMessage[]>([])
-  const [chatInput, setChatInput]         = useState('')
+  const [mode, setMode] = useState<Mode>('multi-agent')
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [chatInput, setChatInput] = useState('')
   const [isChatLoading, setIsChatLoading] = useState(false)
-  const [useSearch, setUseSearch]         = useState(false)
-  const chatEndRef                        = useRef<HTMLDivElement>(null)
+  const [useSearch, setUseSearch] = useState(false)
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
   // -----------------------------------------------------------------------
   // File helpers
@@ -86,21 +96,21 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
   const addFiles = (newFiles: File[]) => {
     const valid = newFiles.filter(f => ACCEPTED.some(ext => f.name.toLowerCase().endsWith(ext)))
     setRawFiles(prev => [...prev, ...valid])
-    setFiles(prev    => [...prev, ...valid.map(f => ({ name: f.name, size: f.size }))])
+    setFiles(prev => [...prev, ...valid.map(f => ({ name: f.name, size: f.size }))])
   }
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setIsDragging(false)
     addFiles(Array.from(e.dataTransfer.files))
   }, [])
   const removeFile = (i: number) => {
-    setFiles(prev    => prev.filter((_, idx) => idx !== i))
+    setFiles(prev => prev.filter((_, idx) => idx !== i))
     setRawFiles(prev => prev.filter((_, idx) => idx !== i))
   }
-  const fmtSize  = (b: number) => b > 1048576 ? `${(b/1048576).toFixed(1)} MB` : `${Math.round(b/1024)} KB`
+  const fmtSize = (b: number) => b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`
   const fileIcon = (n: string) => n.endsWith('.pdf') ? '📄' : n.endsWith('.docx') ? '📝' : n.endsWith('.pptx') ? '📊' : '📃'
 
   const availRatios = selectedModel.type === 'Imagen' ? IMAGEN_RATIOS : GEMINI_RATIOS
-  const availRes    = RESOLUTIONS.filter(r => {
+  const availRes = RESOLUTIONS.filter(r => {
     if (selectedModel.id.includes('imagen-4.0-ultra')) return r !== '4K'
     return true
   })
@@ -130,8 +140,8 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
     }
 
     // Stage transitions for UX
-    setStage('planner');  await delay(1200)
-    setStage('creator');  await delay(800)
+    setStage('planner'); await delay(1200)
+    setStage('creator'); await delay(800)
     setStage('critic')
 
     try {
@@ -178,7 +188,7 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
     }
   }
 
-  const copyText    = (t: string) => navigator.clipboard.writeText(t)
+  const copyText = (t: string) => navigator.clipboard.writeText(t)
   const downloadImg = (url: string, i: number) => {
     const a = document.createElement('a')
     a.href = url
@@ -236,8 +246,8 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
     }
   }
 
-  const isRunning     = ['planner','creator','critic','generating_images'].includes(stage)
-  const isGenImgs     = stage === 'generating_images'
+  const isRunning = ['planner', 'creator', 'critic', 'generating_images'].includes(stage)
+  const isGenImgs = stage === 'generating_images'
 
   return (
     <div className="flex-1 flex overflow-hidden bg-surface-container-lowest">
@@ -397,193 +407,193 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
 
       {/* ── Right: Results or Chat ─────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        
+
         {mode === 'multi-agent' ? (
           <>
             {/* Stage bar */}
             <div className="h-16 border-b border-white/5 flex items-center px-6 gap-4 shrink-0 bg-surface-container/50 backdrop-blur-md">
-          <AgentStep icon={<Target size={14} />}   label="Planner"          active={stage === 'planner'} done={['creator','critic','generating_images','done'].includes(stage)} />
-          <ArrowRight size={14} className="text-white/20 shrink-0" />
-          <AgentStep icon={<PenTool size={14} />}  label="Creator"          active={stage === 'creator'} done={['critic','generating_images','done'].includes(stage)} />
-          <ArrowRight size={14} className="text-white/20 shrink-0" />
-          <AgentStep icon={<Shield size={14} />}   label="Critic"           active={stage === 'critic'} done={['generating_images','done'].includes(stage)} />
-          <ArrowRight size={14} className="text-white/20 shrink-0" />
-          <AgentStep icon={<ImageIcon size={14} />} label="Image Gen"       active={stage === 'generating_images'} done={stage === 'done'} />
-          {result && result.retry_count > 0 && (
-            <div className="ml-auto flex items-center gap-1.5 text-xs text-accent font-semibold">
-              <RefreshCw size={12} /> {result.retry_count} revision{result.retry_count > 1 ? 's' : ''}
-            </div>
-          )}
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
-
-          {/* Idle */}
-          {stage === 'idle' && (
-            <div className="flex flex-col items-center justify-center py-24 space-y-4 text-center">
-              <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <Sparkles size={30} className="text-primary" />
-              </div>
-              <h3 className="text-xl font-bold">Ready to Launch</h3>
-              <p className="text-sm text-on-surface-variant max-w-xs">Configure your pipeline on the left, then hit Launch.</p>
-            </div>
-          )}
-
-          {/* Running */}
-          {isRunning && (
-            <div className="space-y-3">
-              {[
-                { s: 'planner',          msg: 'Analyzing knowledge assets & building strategy...' },
-                { s: 'creator',          msg: 'Crafting ad copy and image prompts...' },
-                { s: 'critic',           msg: 'Reviewing against brand guidelines...' },
-                { s: 'generating_images',msg: `Generating images with ${selectedModel.name} (${aspectRatio} · ${resolution})...` },
-              ].map(({ s, msg }, i) => {
-                const isActive = stage === s
-                return (
-                  <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-                    className={`rounded-2xl border px-5 py-4 flex items-center gap-4 ${isActive ? 'bg-primary/10 border-primary/30' : 'bg-surface-container-high border-white/5 opacity-40'}`}>
-                    {isActive ? <Loader2 size={16} className="animate-spin text-primary shrink-0" /> : <div className="w-4" />}
-                    <span className={`text-sm font-semibold ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}>{msg}</span>
-                    {/* Show progressive image count when generating */}
-                    {isActive && isGenImgs && images.length > 0 && (
-                      <span className="ml-auto text-[10px] font-bold text-accent">{images.length}/{result?.image_prompts.length} done</span>
-                    )}
-                  </motion.div>
-                )
-              })}
-
-              {/* Progressive image preview while generating */}
-              {isGenImgs && images.length > 0 && (
-                <div className="grid grid-cols-3 gap-3 pt-2">
-                  {images.map((img, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                      className="rounded-2xl overflow-hidden border border-white/10 aspect-video bg-surface-container-high">
-                      <img src={img.url} alt={`Generated ${i}`} className="w-full h-full object-cover" />
-                    </motion.div>
-                  ))}
+              <AgentStep icon={<Target size={14} />} label="Planner" active={stage === 'planner'} done={['creator', 'critic', 'generating_images', 'done'].includes(stage)} />
+              <ArrowRight size={14} className="text-white/20 shrink-0" />
+              <AgentStep icon={<PenTool size={14} />} label="Creator" active={stage === 'creator'} done={['critic', 'generating_images', 'done'].includes(stage)} />
+              <ArrowRight size={14} className="text-white/20 shrink-0" />
+              <AgentStep icon={<Shield size={14} />} label="Critic" active={stage === 'critic'} done={['generating_images', 'done'].includes(stage)} />
+              <ArrowRight size={14} className="text-white/20 shrink-0" />
+              <AgentStep icon={<ImageIcon size={14} />} label="Image Gen" active={stage === 'generating_images'} done={stage === 'done'} />
+              {result && result.retry_count > 0 && (
+                <div className="ml-auto flex items-center gap-1.5 text-xs text-accent font-semibold">
+                  <RefreshCw size={12} /> {result.retry_count} revision{result.retry_count > 1 ? 's' : ''}
                 </div>
               )}
             </div>
-          )}
 
-          {/* Error */}
-          {stage === 'error' && (
-            <div className="flex flex-col items-center justify-center py-24 space-y-4 text-center">
-              <div className="w-20 h-20 rounded-2xl bg-error/10 border border-error/20 flex items-center justify-center">
-                <AlertCircle size={30} className="text-error" />
-              </div>
-              <h3 className="text-xl font-bold text-error">Pipeline Failed</h3>
-              <p className="text-sm text-on-surface-variant max-w-xs">{error || 'An unexpected error occurred during the campaign generation.'}</p>
-              <button onClick={() => setStage('idle')} className="text-xs font-bold text-primary hover:underline">Return to start</button>
-            </div>
-          )}
-          {stage === 'done' && result && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              {/* Review badge */}
-              <div className={`rounded-2xl border px-5 py-3 flex items-center gap-3 text-sm font-bold
-                ${result.review_result.startsWith('APPROVE') ? 'bg-success/10 border-success/30 text-success' : 'bg-warning/10 border-warning/30 text-warning'}`}>
-                {result.review_result.startsWith('APPROVE') ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-                {result.review_result.startsWith('APPROVE') ? 'Approved by Critic' : 'Revised by Critic'}
-                <span className="ml-auto text-[10px] font-normal text-on-surface-variant">{selectedModel.name} · {aspectRatio} · {resolution}</span>
-              </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
 
-              {/* ── Generated Images ── */}
-              <ResultSection id="images" icon={<ImageIcon size={15} />} title={`Generated Images (${images.length})`}
-                expanded={expandedSection === 'images'} onToggle={() => setExpandedSection(expandedSection === 'images' ? null : 'images')}>
-                {images.length === 0
-                  ? <p className="text-xs text-on-surface-variant italic">No images were generated.</p>
-                  : (
-                    <div className="space-y-4">
+              {/* Idle */}
+              {stage === 'idle' && (
+                <div className="flex flex-col items-center justify-center py-24 space-y-4 text-center">
+                  <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                    <Sparkles size={30} className="text-primary" />
+                  </div>
+                  <h3 className="text-xl font-bold">Ready to Launch</h3>
+                  <p className="text-sm text-on-surface-variant max-w-xs">Configure your pipeline on the left, then hit Launch.</p>
+                </div>
+              )}
+
+              {/* Running */}
+              {isRunning && (
+                <div className="space-y-3">
+                  {[
+                    { s: 'planner', msg: 'Analyzing knowledge assets & building strategy...' },
+                    { s: 'creator', msg: 'Crafting ad copy and image prompts...' },
+                    { s: 'critic', msg: 'Reviewing against brand guidelines...' },
+                    { s: 'generating_images', msg: `Generating images with ${selectedModel.name} (${aspectRatio} · ${resolution})...` },
+                  ].map(({ s, msg }, i) => {
+                    const isActive = stage === s
+                    return (
+                      <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
+                        className={`rounded-2xl border px-5 py-4 flex items-center gap-4 ${isActive ? 'bg-primary/10 border-primary/30' : 'bg-surface-container-high border-white/5 opacity-40'}`}>
+                        {isActive ? <Loader2 size={16} className="animate-spin text-primary shrink-0" /> : <div className="w-4" />}
+                        <span className={`text-sm font-semibold ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}>{msg}</span>
+                        {/* Show progressive image count when generating */}
+                        {isActive && isGenImgs && images.length > 0 && (
+                          <span className="ml-auto text-[10px] font-bold text-accent">{images.length}/{result?.image_prompts.length} done</span>
+                        )}
+                      </motion.div>
+                    )
+                  })}
+
+                  {/* Progressive image preview while generating */}
+                  {isGenImgs && images.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3 pt-2">
                       {images.map((img, i) => (
-                        <div key={i} className="rounded-2xl overflow-hidden border border-white/10 bg-surface-container-lowest">
-                          <img src={img.url} alt={`Campaign ${i + 1}`} className="w-full object-cover max-h-64" />
-                          <div className="px-4 py-3 flex items-start gap-3">
-                            <span className="text-[10px] font-black text-accent shrink-0 bg-accent/10 px-1.5 py-0.5 rounded-md mt-0.5">P{i + 1}</span>
-                            <p className="text-[11px] text-on-surface-variant flex-1 leading-relaxed font-mono">{img.prompt}</p>
-                            <div className="flex gap-1.5 shrink-0">
-                              <button onClick={() => copyText(img.prompt)} className="p-1.5 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors" title="Copy prompt"><Copy size={13} /></button>
-                              <button onClick={() => downloadImg(img.url, i)} className="p-1.5 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-accent transition-colors" title="Download"><Download size={13} /></button>
-                              {onMoveToStudio && (
-                                <button 
-                                  onClick={() => onMoveToStudio(img.url, img.prompt)} 
-                                  className="p-1.5 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1" 
-                                  title="Edit in Studio"
-                                >
-                                  <PenTool size={13} />
-                                </button>
-                              )}
+                        <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                          className="rounded-2xl overflow-hidden border border-white/10 aspect-video bg-surface-container-high">
+                          <img src={img.url} alt={`Generated ${i}`} className="w-full h-full object-cover" />
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Error */}
+              {stage === 'error' && (
+                <div className="flex flex-col items-center justify-center py-24 space-y-4 text-center">
+                  <div className="w-20 h-20 rounded-2xl bg-error/10 border border-error/20 flex items-center justify-center">
+                    <AlertCircle size={30} className="text-error" />
+                  </div>
+                  <h3 className="text-xl font-bold text-error">Pipeline Failed</h3>
+                  <p className="text-sm text-on-surface-variant max-w-xs">{error || 'An unexpected error occurred during the campaign generation.'}</p>
+                  <button onClick={() => setStage('idle')} className="text-xs font-bold text-primary hover:underline">Return to start</button>
+                </div>
+              )}
+              {stage === 'done' && result && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                  {/* Review badge */}
+                  <div className={`rounded-2xl border px-5 py-3 flex items-center gap-3 text-sm font-bold
+                ${result.review_result.startsWith('APPROVE') ? 'bg-success/10 border-success/30 text-success' : 'bg-warning/10 border-warning/30 text-warning'}`}>
+                    {result.review_result.startsWith('APPROVE') ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                    {result.review_result.startsWith('APPROVE') ? 'Approved by Critic' : 'Revised by Critic'}
+                    <span className="ml-auto text-[10px] font-normal text-on-surface-variant">{selectedModel.name} · {aspectRatio} · {resolution}</span>
+                  </div>
+
+                  {/* ── Generated Images ── */}
+                  <ResultSection id="images" icon={<ImageIcon size={15} />} title={`Generated Images (${images.length})`}
+                    expanded={expandedSection === 'images'} onToggle={() => setExpandedSection(expandedSection === 'images' ? null : 'images')}>
+                    {images.length === 0
+                      ? <p className="text-xs text-on-surface-variant italic">No images were generated.</p>
+                      : (
+                        <div className="space-y-4">
+                          {images.map((img, i) => (
+                            <div key={i} className="rounded-2xl overflow-hidden border border-white/10 bg-surface-container-lowest">
+                              <img src={img.url} alt={`Campaign ${i + 1}`} className="w-full object-cover max-h-64" />
+                              <div className="px-4 py-3 flex items-start gap-3">
+                                <span className="text-[10px] font-black text-accent shrink-0 bg-accent/10 px-1.5 py-0.5 rounded-md mt-0.5">P{i + 1}</span>
+                                <p className="text-[11px] text-on-surface-variant flex-1 leading-relaxed font-mono">{img.prompt}</p>
+                                <div className="flex gap-1.5 shrink-0">
+                                  <button onClick={() => copyText(img.prompt)} className="p-1.5 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors" title="Copy prompt"><Copy size={13} /></button>
+                                  <button onClick={() => downloadImg(img.url, i)} className="p-1.5 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-accent transition-colors" title="Download"><Download size={13} /></button>
+                                  {onMoveToStudio && (
+                                    <button
+                                      onClick={() => onMoveToStudio(img.url, img.prompt)}
+                                      className="p-1.5 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+                                      title="Edit in Studio"
+                                    >
+                                      <PenTool size={13} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
+                          ))}
+                        </div>
+                      )
+                    }
+                  </ResultSection>
+
+                  {/* ── Strategy ── */}
+                  <ResultSection id="strategy" icon={<Target size={15} />} title="Campaign Strategy"
+                    expanded={expandedSection === 'strategy'} onToggle={() => setExpandedSection(expandedSection === 'strategy' ? null : 'strategy')}>
+                    <pre className="text-xs text-on-surface-variant whitespace-pre-wrap font-sans leading-relaxed">{result.strategy}</pre>
+                  </ResultSection>
+
+                  {/* ── Copies ── */}
+                  <ResultSection id="copies" icon={<PenTool size={15} />} title="Ad Copy Variants"
+                    expanded={expandedSection === 'copies'} onToggle={() => setExpandedSection(expandedSection === 'copies' ? null : 'copies')}>
+                    <div className="space-y-3">
+                      {result.copies.map((copy, i) => (
+                        <div key={i} className="rounded-xl bg-surface-container-lowest border border-white/5 px-4 py-3 flex items-start gap-3">
+                          <span className="text-[10px] font-black text-primary shrink-0 bg-primary/10 px-1.5 py-0.5 rounded-md mt-0.5">V{i + 1}</span>
+                          <p className="text-sm text-on-surface flex-1 leading-relaxed">{copy}</p>
+                          <div className="flex gap-2 shrink-0">
+                            <button onClick={() => copyText(copy)} className="text-on-surface-variant hover:text-primary transition-colors" title="Copy text"><Copy size={13} /></button>
+                            {onMoveToStudio && (
+                              <button
+                                onClick={() => {
+                                  // If there's at least one generated image, use the first one as background
+                                  const firstImg = images.length > 0 ? images[0].url : null;
+                                  const firstPrompt = images.length > 0 ? images[0].prompt : null;
+                                  onMoveToStudio(firstImg, firstPrompt, copy);
+                                }}
+                                className="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 bg-white/5 px-2 py-1 rounded-lg"
+                                title="Create Design with this text"
+                              >
+                                <Sparkles size={12} className="text-primary" />
+                                <span className="text-[10px] font-bold">Design</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
-                  )
-                }
-              </ResultSection>
+                  </ResultSection>
 
-              {/* ── Strategy ── */}
-              <ResultSection id="strategy" icon={<Target size={15} />} title="Campaign Strategy"
-                expanded={expandedSection === 'strategy'} onToggle={() => setExpandedSection(expandedSection === 'strategy' ? null : 'strategy')}>
-                <pre className="text-xs text-on-surface-variant whitespace-pre-wrap font-sans leading-relaxed">{result.strategy}</pre>
-              </ResultSection>
-
-              {/* ── Copies ── */}
-              <ResultSection id="copies" icon={<PenTool size={15} />} title="Ad Copy Variants"
-                expanded={expandedSection === 'copies'} onToggle={() => setExpandedSection(expandedSection === 'copies' ? null : 'copies')}>
-                <div className="space-y-3">
-                  {result.copies.map((copy, i) => (
-                    <div key={i} className="rounded-xl bg-surface-container-lowest border border-white/5 px-4 py-3 flex items-start gap-3">
-                      <span className="text-[10px] font-black text-primary shrink-0 bg-primary/10 px-1.5 py-0.5 rounded-md mt-0.5">V{i + 1}</span>
-                      <p className="text-sm text-on-surface flex-1 leading-relaxed">{copy}</p>
-                      <div className="flex gap-2 shrink-0">
-                        <button onClick={() => copyText(copy)} className="text-on-surface-variant hover:text-primary transition-colors" title="Copy text"><Copy size={13} /></button>
-                        {onMoveToStudio && (
-                          <button 
-                            onClick={() => {
-                              // If there's at least one generated image, use the first one as background
-                              const firstImg = images.length > 0 ? images[0].url : null;
-                              const firstPrompt = images.length > 0 ? images[0].prompt : null;
-                              onMoveToStudio(firstImg, firstPrompt, copy);
-                            }} 
-                            className="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 bg-white/5 px-2 py-1 rounded-lg"
-                            title="Create Design with this text"
-                          >
-                            <Sparkles size={12} className="text-primary" />
-                            <span className="text-[10px] font-bold">Design</span>
-                          </button>
-                        )}
-                      </div>
+                  {/* ── Image Prompts (text only) ── */}
+                  <ResultSection id="image_prompts" icon={<ImageIcon size={15} />} title="Image Prompts (Raw)"
+                    expanded={expandedSection === 'image_prompts'} onToggle={() => setExpandedSection(expandedSection === 'image_prompts' ? null : 'image_prompts')}>
+                    <div className="space-y-3">
+                      {result.image_prompts.map((p, i) => (
+                        <div key={i} className="rounded-xl bg-surface-container-lowest border border-white/5 px-4 py-3 flex items-start gap-3">
+                          <span className="text-[10px] font-black text-accent shrink-0 bg-accent/10 px-1.5 py-0.5 rounded-md mt-0.5">P{i + 1}</span>
+                          <p className="text-xs text-on-surface-variant flex-1 font-mono leading-relaxed">{p}</p>
+                          <button onClick={() => copyText(p)} className="text-on-surface-variant hover:text-accent shrink-0"><Copy size={13} /></button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </ResultSection>
-
-              {/* ── Image Prompts (text only) ── */}
-              <ResultSection id="image_prompts" icon={<ImageIcon size={15} />} title="Image Prompts (Raw)"
-                expanded={expandedSection === 'image_prompts'} onToggle={() => setExpandedSection(expandedSection === 'image_prompts' ? null : 'image_prompts')}>
-                <div className="space-y-3">
-                  {result.image_prompts.map((p, i) => (
-                    <div key={i} className="rounded-xl bg-surface-container-lowest border border-white/5 px-4 py-3 flex items-start gap-3">
-                      <span className="text-[10px] font-black text-accent shrink-0 bg-accent/10 px-1.5 py-0.5 rounded-md mt-0.5">P{i + 1}</span>
-                      <p className="text-xs text-on-surface-variant flex-1 font-mono leading-relaxed">{p}</p>
-                      <button onClick={() => copyText(p)} className="text-on-surface-variant hover:text-accent shrink-0"><Copy size={13} /></button>
-                    </div>
-                  ))}
-                </div>
-              </ResultSection>
-            </motion.div>
-          )}
-        </div>
-      </>
-    ) : (
+                  </ResultSection>
+                </motion.div>
+              )}
+            </div>
+          </>
+        ) : (
           /* ── Chatbot UI ── */
           <div className="flex-1 flex flex-col bg-surface-container-lowest">
             <div className="h-16 border-b border-white/5 flex items-center px-6 shrink-0 bg-surface-container/50 backdrop-blur-md">
               <MessageSquare size={18} className="text-primary mr-2" />
               <h2 className="text-lg font-bold">Knowledge Chatbot</h2>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
               {chatMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center text-on-surface-variant opacity-50">

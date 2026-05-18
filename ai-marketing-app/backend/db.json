@@ -113,6 +113,28 @@
   ],
   "projects": [
     {
+      "id": "e44e3f59-df3f-4569-81dd-67bbcca76385",
+      "name": "battery pack",
+      "description": "battery pack",
+      "type": "New Campaign",
+      "created_at": "2026-05-18 22:59:26",
+      "created_by": "kimeunyong",
+      "members": [
+        {
+          "id": "leeminho1",
+          "name": "이민호",
+          "department": "R&D센터.AI선행연구팀"
+        },
+        {
+          "id": "iu",
+          "name": "이지은",
+          "department": "경영AX담당.데이터분석팀"
+        }
+      ],
+      "team_id": "team-default",
+      "latest_image": "/storage/assets/24f7fde5-662a-42ab-963e-609e2ab40444.png"
+    },
+    {
       "id": "proj-1",
       "name": "Q3 Campaign Sprint",
       "description": "Q3 마케팅 스프린트",
@@ -199,5 +221,86 @@
       "role": "EDITOR"
     }
   ],
-  "assets": []
+  "assets": [
+    {
+      "id": "dfb19fb8-0113-4182-a76d-e56f2a7e605f",
+      "team_id": "team-default",
+      "project_id": "e44e3f59-df3f-4569-81dd-67bbcca76385",
+      "type": "image",
+      "name": "Generated for battery pack",
+      "file_url": "/storage/assets/dfb19fb8-0113-4182-a76d-e56f2a7e605f.png",
+      "created_at": "2026-05-18 23:30:32",
+      "created_by": "system"
+    },
+    {
+      "id": "995b6983-3a48-477f-9342-09eeb6c233c2",
+      "team_id": "team-default",
+      "project_id": "e44e3f59-df3f-4569-81dd-67bbcca76385",
+      "type": "image",
+      "name": "Generated for battery pack",
+      "file_url": "/storage/assets/995b6983-3a48-477f-9342-09eeb6c233c2.png",
+      "created_at": "2026-05-18 23:33:21",
+      "created_by": "system"
+    },
+    {
+      "id": "6eb713b4-bf42-4cde-867d-797abe4f5ad5",
+      "team_id": "team-default",
+      "project_id": "e44e3f59-df3f-4569-81dd-67bbcca76385",
+      "type": "image",
+      "name": "Generated for battery pack",
+      "file_url": "/storage/assets/6eb713b4-bf42-4cde-867d-797abe4f5ad5.png",
+      "created_at": "2026-05-18 23:35:37",
+      "created_by": "system"
+    },
+    {
+      "id": "5eb7d0fe-d399-4beb-bc50-8715409108ed",
+      "team_id": "team-default",
+      "project_id": "e44e3f59-df3f-4569-81dd-67bbcca76385",
+      "type": "image",
+      "name": "Generated for battery pack",
+      "file_url": "/storage/assets/5eb7d0fe-d399-4beb-bc50-8715409108ed.png",
+      "created_at": "2026-05-18 23:37:57",
+      "created_by": "system"
+    },
+    {
+      "id": "a2ac60cc-e935-4f2d-a96e-99c854f60c2e",
+      "team_id": "team-default",
+      "project_id": "e44e3f59-df3f-4569-81dd-67bbcca76385",
+      "type": "image",
+      "name": "Generated for battery pack",
+      "file_url": "/storage/assets/a2ac60cc-e935-4f2d-a96e-99c854f60c2e.png",
+      "created_at": "2026-05-18 23:37:58",
+      "created_by": "system"
+    },
+    {
+      "id": "4251c1db-8942-4bb3-8cf9-72c1c0fe8147",
+      "team_id": "team-default",
+      "project_id": "e44e3f59-df3f-4569-81dd-67bbcca76385",
+      "type": "image",
+      "name": "Generated for battery pack",
+      "file_url": "/storage/assets/4251c1db-8942-4bb3-8cf9-72c1c0fe8147.png",
+      "created_at": "2026-05-18 23:37:59",
+      "created_by": "system"
+    },
+    {
+      "id": "103d80ad-e95e-443f-9177-7f0036204828",
+      "team_id": "team-default",
+      "project_id": "e44e3f59-df3f-4569-81dd-67bbcca76385",
+      "type": "image",
+      "name": "Generated for battery pack",
+      "file_url": "/storage/assets/103d80ad-e95e-443f-9177-7f0036204828.png",
+      "created_at": "2026-05-18 23:45:27",
+      "created_by": "system"
+    },
+    {
+      "id": "24f7fde5-662a-42ab-963e-609e2ab40444",
+      "team_id": "team-default",
+      "project_id": "e44e3f59-df3f-4569-81dd-67bbcca76385",
+      "type": "image",
+      "name": "Generated for battery pack",
+      "file_url": "/storage/assets/24f7fde5-662a-42ab-963e-609e2ab40444.png",
+      "created_at": "2026-05-18 23:45:31",
+      "created_by": "system"
+    }
+  ]
 }

@@ -48,7 +48,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-API_KEY = "xxxxxxxxxx"
+API_KEY = "xxxxxxxxxxxxxxxxxx"
 client = genai.Client(api_key=API_KEY)
 
 # ─── Config ───────────────────────────────────────────────
@@ -206,6 +206,7 @@ class UpdateDepartmentRequest(BaseModel):
 class CreateProjectRequest(BaseModel):
     name: str
     description: str = ""
+    type: Optional[str] = "New Campaign"
     members: List[str] = []  # user ids
     team_id: Optional[str] = "team-default"
 
@@ -453,7 +454,7 @@ async def create_project(req: CreateProjectRequest, current_user: dict = Depends
         "id": str(uuid.uuid4()),
         "name": req.name,
         "description": req.description,
-        "type": "New Campaign",
+        "type": req.type or "New Campaign",
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "created_by": current_user["id"],
         "members": member_details,
@@ -625,7 +626,7 @@ def _run_gemini(request: GenerateRequest):
     raise ValueError("No image found.")
 
 @app.post("/generate")
-async def generate_image(request: GenerateRequest):
+async def generate_image(request: GenerateRequest, authorization: Optional[str] = Header(None)):
     try:
         logger.info(f"Generate Request for Project: {request.project_id}")
         timeout_seconds = 120
@@ -633,6 +634,49 @@ async def generate_image(request: GenerateRequest):
             b64, mime = await asyncio.wait_for(asyncio.to_thread(_run_imagen, request), timeout=timeout_seconds)
         else:
             b64, mime = await asyncio.wait_for(asyncio.to_thread(_run_gemini, request), timeout=timeout_seconds)
+
+        # Save generated image as a project asset and update project's latest image if project_id is provided
+        if request.project_id:
+            try:
+                db = load_db()
+                project = next((p for p in db["projects"] if p["id"] == request.project_id), None)
+                if project:
+                    # Save image file
+                    image_bytes = base64.b64decode(b64)
+                    file_id = str(uuid.uuid4())
+                    file_name = f"{file_id}.png"
+                    file_path = STORAGE_DIR / file_name
+                    with open(file_path, "wb") as buffer:
+                        buffer.write(image_bytes)
+                    
+                    # Update project latest image
+                    project["latest_image"] = f"/storage/assets/{file_name}"
+                    
+                    # Add as an asset to db["assets"]
+                    user_id = "system"
+                    if authorization and authorization.startswith("Bearer "):
+                        try:
+                            token = authorization.split(" ")[1]
+                            user_id = decode_token(token)
+                        except Exception:
+                            pass
+                    
+                    new_asset = {
+                        "id": file_id,
+                        "team_id": project.get("team_id", "team-default"),
+                        "project_id": request.project_id,
+                        "type": "image",
+                        "name": f"Generated for {project['name']}",
+                        "file_url": f"/storage/assets/{file_name}",
+                        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "created_by": user_id
+                    }
+                    db["assets"].append(new_asset)
+                    save_db(db)
+                    logger.info(f"Successfully saved generated asset {file_id} for project {request.project_id}")
+            except Exception as save_err:
+                logger.error(f"Failed to auto-save generated asset: {save_err}")
+
         return {"image": f"data:{mime};base64,{b64}"}
     except Exception as e:
         logger.exception("Generation failed")
@@ -797,20 +841,22 @@ async def campaign_chat(req: ChatRequest):
         logger.exception("Chat generation error")
         raise HTTPException(status_code=500, detail=str(e))
 
-# ─── Frontend Static Files Serve ───────────────────────────
+# ─── [수정 전 전역 영역에 아래 코드들이 위치하도록 변경] ───
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-
+# 1. 파일 업로드용 스토리지 디렉토리 마운트 (전역 영역)
+app.mount("/storage", StaticFiles(directory=str(BASE_DIR / "storage")), name="storage")
+# 2. 컴파일된 React 프론트엔드 정적 파일 마운트 (전역 영역)
 DIST_DIR = BASE_DIR.parent / "dist"
-
-logger.info(f"Checking frontend static files path: {DIST_DIR} | exists: {DIST_DIR.exists()}")
-
 if DIST_DIR.exists():
     app.mount("/", StaticFiles(directory=str(DIST_DIR), html=True), name="frontend")
-    
+    # 3. React SPA 라우팅 지원 (전역 영역)
     @app.exception_handler(404)
     async def custom_404_handler(request, exc):
         return FileResponse(str(DIST_DIR / "index.html"))
-
+# ─── [순수 uvicorn 실행기만 __main__ 블록에 유지] ───
 if __name__ == "__main__":
     import uvicorn
+    # python main.py 로 직접 더블 클릭/실행할 때를 위한 백업 실행기
     uvicorn.run(app, host="0.0.0.0", port=8000)
+

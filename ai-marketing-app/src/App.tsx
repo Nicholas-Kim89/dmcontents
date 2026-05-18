@@ -19,6 +19,7 @@ interface Project {
   description?: string
   created_at: string
   members?: { id: string; name: string; department: string }[]
+  latest_image?: string
 }
 
 function AppContent() {
@@ -33,7 +34,7 @@ function AppContent() {
 
   useEffect(() => {
     if (user && token && currentTeam) fetchProjects()
-  }, [user, token, currentTeam])
+  }, [user, token, currentTeam, activeTab])
 
   const fetchProjects = async () => {
     try {
@@ -129,7 +130,10 @@ function AppContent() {
                       <Plus size={18} />
                       New Project
                     </button>
-                    <button className="glass px-6 py-2 rounded-full font-semibold hover:bg-white/5 transition-all flex items-center gap-2">
+                    <button 
+                      onClick={() => setActiveTab('library')}
+                      className="glass px-6 py-2 rounded-full font-semibold hover:bg-white/5 transition-all flex items-center gap-2"
+                    >
                       Explore Library
                       <ArrowRight size={18} />
                     </button>
@@ -152,7 +156,7 @@ function AppContent() {
                         date={proj.created_at}
                         description={proj.description}
                         memberCount={proj.members?.length ?? 0}
-                        image={`https://images.unsplash.com/photo-${proj.id === 'proj-1' ? '1618005182384-a83a8bd57fbe' : '1620641788421-7a1c342ea42e'}?auto=format&fit=crop&q=80&w=400`}
+                        image={proj.latest_image || `https://images.unsplash.com/photo-${proj.id === 'proj-1' ? '1618005182384-a83a8bd57fbe' : '1620641788421-7a1c342ea42e'}?auto=format&fit=crop&q=80&w=400`}
                         onClick={() => selectProject(proj)}
                       />
                     ))}

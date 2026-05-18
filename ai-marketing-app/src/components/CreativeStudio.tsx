@@ -19,7 +19,9 @@ import {
   Edit3,
   CheckSquare,
   Square,
-  Plus
+  Plus,
+  Maximize2,
+  X
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -87,6 +89,7 @@ export function CreativeStudio({ project, incomingImage, clearIncomingImage }: C
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
   const [history, setHistory] = useState<string[]>([])
   const [compareMode, setCompareMode] = useState(false)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [isEditingBase, setIsEditingBase] = useState(false)
   const [selectedAssets, setSelectedAssets] = useState<string[]>([])
 
@@ -869,36 +872,63 @@ export function CreativeStudio({ project, incomingImage, clearIncomingImage }: C
                 className="w-full h-full p-4 mb-12 overflow-y-auto custom-scrollbar"
               >
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 content-start">
-                  {[...(generatedImage ? [generatedImage] : []), ...history].map((img, idx) => (
-                    <div key={idx} className="relative group flex flex-col gap-2">
-                      <div className="flex justify-between items-center px-1">
-                        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                          {idx === 0 && generatedImage ? 'Current Base' : `Version ${idx}`}
-                        </span>
-                      </div>
-                      <div 
-                        className="rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary/50 shadow-lg bg-surface-container-high relative aspect-square cursor-pointer transition-all hover:scale-[1.02]"
-                        onClick={() => handleEditFromCompare(img)}
-                        title="Click to Edit this version"
-                      >
-                        <img src={img} className="w-full h-full object-cover" alt={`Version ${idx}`} />
-                        
-                        <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <div className="bg-primary px-3 py-1.5 rounded-full flex items-center gap-2 shadow-xl">
-                            <Edit3 size={14} className="text-on-primary" />
-                            <span className="text-xs font-bold text-on-primary">Edit</span>
+                  {(() => {
+                    const allUniqueImages = Array.from(new Set([
+                      ...slotImages.filter((img): img is string => !!img),
+                      ...(generatedImage ? [generatedImage] : []),
+                      ...history
+                    ]));
+                    return allUniqueImages.map((img, idx) => {
+                      const isCurrentBase = img === generatedImage;
+                      const isFromSlots = slotImages.includes(img) && img !== generatedImage;
+                      let label = `Version ${idx}`;
+                      if (isCurrentBase) label = 'Current Base';
+                      else if (isFromSlots) {
+                        const slotIdx = slotImages.indexOf(img);
+                        label = `Slot ${slotIdx + 1} Variation`;
+                      }
+                      return (
+                        <div key={idx} className="relative group flex flex-col gap-2">
+                          <div className="flex justify-between items-center px-1">
+                            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+                              {label}
+                            </span>
+                          </div>
+                          <div 
+                            className="rounded-2xl overflow-hidden border-2 border-transparent hover:border-primary/50 shadow-lg bg-surface-container-high relative aspect-square cursor-pointer transition-all hover:scale-[1.02]"
+                            onClick={() => handleEditFromCompare(img)}
+                            title="Click to Edit this version"
+                          >
+                            <img src={img} className="w-full h-full object-cover" alt={label} />
+                            
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-3">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEditFromCompare(img) }}
+                                className="bg-primary hover:bg-primary-hover text-on-primary p-2.5 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition-all"
+                                title="Edit this version"
+                              >
+                                <Edit3 size={16} />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setPreviewImage(img) }}
+                                className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition-all border border-white/10"
+                                title="Preview original size & aspect ratio"
+                              >
+                                <Maximize2 size={16} />
+                              </button>
+                            </div>
+
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); toggleAssetSelection(img) }}
+                              className="absolute top-3 right-3 bg-black/50 p-1.5 rounded-lg text-white hover:bg-black/80 transition-all z-10"
+                            >
+                              {selectedAssets.includes(img) ? <CheckSquare className="text-primary" size={20} /> : <Square size={20} />}
+                            </button>
                           </div>
                         </div>
-
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); toggleAssetSelection(img) }}
-                          className="absolute top-3 right-3 bg-black/50 p-1.5 rounded-lg text-white hover:bg-black/80 transition-all z-10"
-                        >
-                          {selectedAssets.includes(img) ? <CheckSquare className="text-primary" size={20} /> : <Square size={20} />}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    });
+                  })()}
                 </div>
               </motion.div>
             )}
@@ -972,6 +1002,7 @@ export function CreativeStudio({ project, incomingImage, clearIncomingImage }: C
                     <img src={img} className="w-full h-full object-cover" alt={`Version ${idx}`} />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
                       <button onClick={() => handleEditFromCompare(img)} title="Edit this version" className="p-2 rounded-lg bg-primary text-on-primary hover:scale-110 transition-transform"><Edit3 size={16} /></button>
+                      <button onClick={() => setPreviewImage(img)} title="Preview full size" className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 hover:scale-110 transition-transform border border-white/10"><Maximize2 size={16} /></button>
                       <button onClick={() => handleDeleteHistory(idx)} className="p-2 rounded-lg bg-error/20 text-error hover:bg-error/40 transition-colors"><Trash2 size={16} /></button>
                     </div>
                   </div>
@@ -1027,6 +1058,71 @@ export function CreativeStudio({ project, incomingImage, clearIncomingImage }: C
         </div>
       </div>
     </div>
+
+    {/* High-Fidelity Original Aspect Ratio & Size Preview Modal */}
+    <AnimatePresence>
+      {previewImage && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 cursor-zoom-out select-none"
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-4 right-4 bg-white/10 text-white p-3 rounded-full hover:bg-white/20 transition-all cursor-pointer z-50 border border-white/10 hover:rotate-90 duration-300"
+            title="Close Preview"
+          >
+            <X size={20} />
+          </button>
+
+          {/* Image Container with Original Aspect Ratio */}
+          <motion.div
+            initial={{ scale: 0.95, y: 10 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.95, y: 10 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-[90%] max-h-[80%] flex items-center justify-center bg-surface-container-highest/20 rounded-2xl p-2 border border-white/10 shadow-2xl overflow-hidden"
+          >
+            <img
+              src={previewImage}
+              alt="High-Fidelity Original Resolution Preview"
+              className="max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl"
+            />
+          </motion.div>
+
+          {/* Bottom Meta Bar */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-4 px-6 py-2.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md flex items-center gap-6 text-xs text-on-surface-variant font-bold shadow-xl animate-in fade-in-50 duration-300"
+          >
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              Original Resolution
+            </span>
+            <div className="w-[1px] h-3 bg-white/10" />
+            <button 
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = previewImage;
+                link.download = `preview-${project?.name || 'export'}-${Date.now()}.png`;
+                link.click();
+              }}
+              className="text-primary hover:text-primary-hover flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Download size={14} />
+              Download Original
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </ErrorBoundary>
   )
 }

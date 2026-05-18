@@ -19,6 +19,22 @@ export function NewProjectModal({ onClose, onCreated }: NewProjectModalProps) {
   const { token, currentTeam } = useAuth()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [type, setType] = useState('New Campaign')
+  const [customType, setCustomType] = useState('')
+  const predefinedTypes = [
+    'New Campaign',
+    'Marketing Strategy',
+    'AI Tuning',
+    'Content Creation',
+    'Social Media Campaign',
+    'Brand Identity',
+    'Product Launch',
+    'Customer Analysis',
+    'Email Marketing',
+    'Event Promotion',
+    'SEO Optimization',
+    'Custom Input'
+  ]
   const [memberQuery, setMemberQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Member[]>([])
   const [selectedMembers, setSelectedMembers] = useState<Member[]>([])
@@ -72,6 +88,7 @@ export function NewProjectModal({ onClose, onCreated }: NewProjectModalProps) {
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim(),
+          type: type === 'Custom Input' ? customType.trim() : type,
           members: selectedMembers.map(m => m.id),
           team_id: currentTeam?.id
         })
@@ -158,6 +175,43 @@ export function NewProjectModal({ onClose, onCreated }: NewProjectModalProps) {
                 className={`${inputClass} resize-none`}
               />
             </div>
+
+            {/* Project Type */}
+            <div>
+              <label className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-2 block">
+                프로젝트 유형 <span className="text-primary">*</span>
+              </label>
+              <select
+                value={type}
+                onChange={e => setType(e.target.value)}
+                className={inputClass}
+              >
+                {predefinedTypes.map(t => (
+                  <option key={t} value={t} className="bg-surface-container-highest text-white">
+                    {t === 'Custom Input' ? '직접 입력...' : t}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Custom Project Type Input */}
+            {type === 'Custom Input' && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <input
+                  type="text"
+                  value={customType}
+                  onChange={e => setCustomType(e.target.value)}
+                  placeholder="유형을 직접 입력해 주세요 (예: 글로벌 프로모션)"
+                  required
+                  className={inputClass}
+                />
+              </motion.div>
+            )}
 
             {/* Member Search */}
             <div>
