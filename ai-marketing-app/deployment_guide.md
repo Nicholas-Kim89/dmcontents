@@ -116,7 +116,7 @@ ADMIN_EMAIL=kimeunyong@lgchem.com
 JWT_SECRET=your-secure-jwt-secret-string
 EMAIL_DOMAIN=lgchem.com
 # 사용하실 활성 Gemini API Key를 입력하세요:
-GEMINI_API_KEY=AIzaSyAZp6XELMchsp08ICW1H6snTO8R9MG9T_o
+GEMINI_API_KEY=xxxxxxxxxxx
 ```
 
 #### 4단계: React 프론트엔드 빌드
@@ -287,7 +287,7 @@ gcloud run deploy ai-marketing-app \
     --platform managed \
     --region asia-northeast3 \
     --allow-unauthenticated \
-    --set-env-vars="GEMINI_API_KEY=AIzaSyAZp6XELMchsp08ICW1H6snTO8R9MG9T_o,JWT_SECRET=synthetix-lgchem-secret-2026,ADMIN_EMAIL=kimeunyong@lgchem.com"
+    --set-env-vars="GEMINI_API_KEY=xxxxxxxxxxx,JWT_SECRET=synthetix-lgchem-secret-2026,ADMIN_EMAIL=kimeunyong@lgchem.com"
 ```
 배포가 정상적으로 완료되면 구글에서 범용으로 접속 가능한 HTTPS 공용 주소(예: `https://ai-marketing-app-xxxxxx-an.a.run.app`)를 출력합니다. 해당 주소로 접속하면 별도의 CORS 설정 없이 프론트/백엔드가 하나로 즉시 작동합니다.
 

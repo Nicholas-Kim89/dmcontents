@@ -43,6 +43,7 @@ interface CreativeStudioProps {
   project: { id: string, name: string } | null;
   incomingImage?: { url?: string | null, prompt?: string | null, text?: string | null } | null;
   clearIncomingImage?: () => void;
+  onTriggerFeedback?: (images: string[]) => void;
 }
 
 // Simple Error Boundary Component
@@ -76,7 +77,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 
 import React from 'react'
 
-export function CreativeStudio({ project, incomingImage, clearIncomingImage }: CreativeStudioProps) {
+export function CreativeStudio({ project, incomingImage, clearIncomingImage, onTriggerFeedback }: CreativeStudioProps) {
   const [activeTool, setActiveTool] = useState('select')
   const [aspectRatio, setAspectRatio] = useState('1:1')
   const [selectedModel, setSelectedModel] = useState(models[1])
@@ -940,6 +941,28 @@ export function CreativeStudio({ project, incomingImage, clearIncomingImage }: C
               layout
               className="glass p-2 rounded-2xl flex flex-col gap-2 shadow-2xl border border-white/10 focus-within:border-primary/40 transition-all bg-surface-container/80"
             >
+              {(() => {
+                const generatedImages = slotImages.filter((img): img is string => img !== null);
+                if (generatedImages.length > 0 && onTriggerFeedback) {
+                  return (
+                    <div className="flex justify-between items-center px-2 pt-1 border-b border-white/5 pb-2 mb-1">
+                      <span className="text-xs text-on-surface-variant font-medium">
+                        생성된 디자인 시안: <span className="text-primary font-bold">{generatedImages.length}개</span>
+                      </span>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => onTriggerFeedback(generatedImages)}
+                        className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-accent via-primary to-accent hover:from-primary hover:to-accent text-on-primary text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-accent/20 transition-all cursor-pointer border border-white/10"
+                      >
+                        <Sparkles size={14} className="animate-pulse text-accent-container" />
+                        AI 디자인 피드백 받기
+                      </motion.button>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => {

@@ -48,7 +48,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-API_KEY = "xxxxxxxxxxxxxxxxxx"
+API_KEY = os.getenv("GEMINI_API_KEY", "xxxxxxxxxxxxxxxxxx")
 client = genai.Client(api_key=API_KEY)
 
 # ─── Config ───────────────────────────────────────────────
@@ -98,7 +98,8 @@ def load_db() -> dict:
                 "role": "OWNER"
             }
         ],
-        "assets": []
+        "assets": [],
+        "chats": []
     }
 
     if DB_PATH.exists():
@@ -124,6 +125,9 @@ def load_db() -> dict:
                             "user_id": user["id"],
                             "role": "EDITOR" if user["role"] != "admin" else "OWNER"
                         })
+                save_db(db)
+            if "chats" not in db:
+                db["chats"] = []
                 save_db(db)
             return db
     return default_db
@@ -241,6 +245,8 @@ class ChatRequest(BaseModel):
     message: str
     history: List[ChatMessage] = []
     google_search: bool = False
+    project_id: Optional[str] = None
+    images: Optional[List[str]] = None
 
 # ─── Auth Endpoints ────────────────────────────────────────
 @app.post("/auth/register")
@@ -809,37 +815,186 @@ async def campaign_generate(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/campaign/chat")
-async def campaign_chat(req: ChatRequest):
+async def campaign_chat(req: ChatRequest, current_user: dict = Depends(get_current_user)):
+    db = load_db()
+    chats = db.get("chats", [])
+    now = datetime.now()
+    
+    # Load user specific & project specific chat history from the past 30 days
+    db_history = []
+    if req.project_id:
+        for c in chats:
+            if c.get("user_id") == current_user["id"] and c.get("project_id") == req.project_id:
+                try:
+                    created_at = datetime.strptime(c["created_at"], "%Y-%m-%d %H:%M:%S")
+                    if (now - created_at).days <= 30:
+                        db_history.append(c)
+                except Exception:
+                    pass
+                    
+    # Reconstruct history and extract system instruction
     knowledge_text = campaign_sessions.get(req.session_id, {}).get("knowledge_text", "")
     system_instruction = (
         "You are an AI Marketing Assistant. Use the provided Knowledge Base to answer the user's questions.\n"
         f"--- KNOWLEDGE BASE ---\n{knowledge_text}\n----------------------\n"
+        "You will also receive attached design images (if provided). When the user asks for feedback on their designs or images, carefully analyze their content, aesthetics, layouts, and copy, and provide rich, professional, actionable marketing and design feedback.\n"
         "If the answer is not in the knowledge base, answer based on your general marketing knowledge."
     )
-    contents = [types.Content(role="user", parts=[types.Part.from_text(text=system_instruction)])]
-    contents.append(types.Content(role="model", parts=[types.Part.from_text(text="Understood. I will answer based on the knowledge base.")]))
-    for msg in req.history:
-        role = "user" if msg.role == "user" else "model"
-        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=msg.content)]))
-    contents.append(types.Content(role="user", parts=[types.Part.from_text(text=req.message)]))
+    
+    history_contents = []
+    
+    # Reconstruct history
+    db_history.sort(key=lambda x: x["created_at"])
+    for c in db_history:
+        parts = []
+        if c.get("images"):
+            for img_b64 in c["images"]:
+                try:
+                    if "/storage/assets/" in img_b64:
+                        file_name = img_b64.split("/storage/assets/")[1].split("?")[0]
+                        file_path = STORAGE_DIR / file_name
+                        if file_path.exists():
+                            with open(file_path, "rb") as f:
+                                file_bytes = f.read()
+                            mime_type = "image/png"
+                            if file_name.endswith(".jpg") or file_name.endswith(".jpeg"):
+                                mime_type = "image/jpeg"
+                            elif file_name.endswith(".webp"):
+                                mime_type = "image/webp"
+                            parts.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
+                            continue
+                    
+                    b64_data = img_b64.split(",")[1] if "," in img_b64 else img_b64
+                    mime_type = "image/png"
+                    if "image/jpeg" in img_b64:
+                        mime_type = "image/jpeg"
+                    elif "image/webp" in img_b64:
+                        mime_type = "image/webp"
+                    parts.append(types.Part.from_bytes(data=base64.b64decode(b64_data), mime_type=mime_type))
+                except Exception as e:
+                    logger.error(f"Error loading historical image in hybrid memory: {e}")
+        parts.append(types.Part.from_text(text=c["content"]))
+        role = "user" if c["role"] == "user" else "model"
+        history_contents.append(types.Content(role=role, parts=parts))
+        
     try:
-        config_params = {}
+        config_params = {
+            "system_instruction": system_instruction
+        }
         if req.google_search:
             config_params["tools"] = [types.Tool(google_search=types.GoogleSearchRetrieval())]
-        
-        config = types.GenerateContentConfig(
-            **config_params
+            
+        chat = client.chats.create(
+            model="gemini-3.5-flash",
+            history=history_contents,
+            config=types.GenerateContentConfig(**config_params)
         )
         
-        response = client.models.generate_content(
-            model='gemini-3-flash-preview', 
-            contents=contents,
-            config=config
-        )
+        current_parts = []
+        if req.images:
+            logger.info(f"Processing {len(req.images)} attached images for chat")
+            for img_idx, img_b64 in enumerate(req.images):
+                try:
+                    if "/storage/assets/" in img_b64:
+                        # File stored on server: extract filename and load bytes
+                        file_name = img_b64.split("/storage/assets/")[1].split("?")[0]
+                        file_path = STORAGE_DIR / file_name
+                        logger.info(f"[Img {img_idx}] Loading from storage: {file_path}")
+                        if file_path.exists():
+                            with open(file_path, "rb") as f:
+                                file_bytes = f.read()
+                            mime_type = "image/png"
+                            if file_name.lower().endswith((".jpg", ".jpeg")):
+                                mime_type = "image/jpeg"
+                            elif file_name.lower().endswith(".webp"):
+                                mime_type = "image/webp"
+                            current_parts.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
+                            logger.info(f"[Img {img_idx}] Loaded from storage ({len(file_bytes)} bytes, {mime_type})")
+                            continue
+                        else:
+                            logger.error(f"[Img {img_idx}] Storage file not found: {file_path}")
+                    
+                    # Handle base64 data URL: data:image/png;base64,XXXXX
+                    if "," in img_b64:
+                        header, b64_data = img_b64.split(",", 1)
+                        # Detect MIME type from header
+                        mime_type = "image/png"
+                        if "image/jpeg" in header or "image/jpg" in header:
+                            mime_type = "image/jpeg"
+                        elif "image/webp" in header:
+                            mime_type = "image/webp"
+                        elif "image/gif" in header:
+                            mime_type = "image/gif"
+                    else:
+                        b64_data = img_b64
+                        mime_type = "image/png"
+                    
+                    # Decode and append
+                    img_bytes = base64.b64decode(b64_data)
+                    current_parts.append(types.Part.from_bytes(data=img_bytes, mime_type=mime_type))
+                    logger.info(f"[Img {img_idx}] Decoded base64 image ({len(img_bytes)} bytes, {mime_type})")
+                except Exception as e:
+                    logger.error(f"[Img {img_idx}] Failed to process image: {e}")
+        current_parts.append(types.Part.from_text(text=req.message))
+        logger.info(f"Sending {len(current_parts)} parts to Gemini (images: {len(current_parts)-1}, text: 1)")
+        
+        response = chat.send_message(current_parts)
+        
+        # Save new turns
+        created_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        db_user_message = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "project_id": req.project_id or "default",
+            "session_id": req.session_id,
+            "role": "user",
+            "content": req.message,
+            "images": req.images or [],
+            "created_at": created_time
+        }
+        db_model_message = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "project_id": req.project_id or "default",
+            "session_id": req.session_id,
+            "role": "model",
+            "content": response.text,
+            "images": [],
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        db["chats"].append(db_user_message)
+        db["chats"].append(db_model_message)
+        save_db(db)
+        
         return {"response": response.text}
     except Exception as e:
         logger.exception("Chat generation error")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/campaign/chat/history")
+async def get_chat_history(project_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    if not project_id:
+        return []
+    db = load_db()
+    chats = db.get("chats", [])
+    filtered_chats = []
+    now = datetime.now()
+    for c in chats:
+        if c.get("user_id") == current_user["id"] and c.get("project_id") == project_id:
+            try:
+                created_at = datetime.strptime(c["created_at"], "%Y-%m-%d %H:%M:%S")
+                if (now - created_at).days <= 30:
+                    filtered_chats.append({
+                        "role": c["role"],
+                        "content": c["content"],
+                        "images": c.get("images", []),
+                        "created_at": c["created_at"]
+                    })
+            except Exception:
+                pass
+    filtered_chats.sort(key=lambda x: x["created_at"])
+    return filtered_chats
 
 # ─── [수정 전 전역 영역에 아래 코드들이 위치하도록 변경] ───
 from fastapi.staticfiles import StaticFiles

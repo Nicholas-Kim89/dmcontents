@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -6,6 +6,8 @@ import {
   CheckCircle, AlertCircle, Copy, Image as ImageIcon,
   Target, PenTool, Shield, RefreshCw, ArrowRight, Download, MessageSquare, Send, Search
 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 // -----------------------------------------------------------------------
 // Config
@@ -37,17 +39,19 @@ interface GeneratedImage { prompt: string; url: string; index: number }
 
 type AgentStage = 'idle' | 'planner' | 'creator' | 'critic' | 'generating_images' | 'done' | 'error'
 type Mode = 'multi-agent' | 'chatbot'
-type ChatMessage = { role: 'user' | 'model', content: string }
+type ChatMessage = { role: 'user' | 'model', content: string, images?: string[] }
 
 interface CampaignStudioProps {
   project: { id: string; name: string } | null;
   onMoveToStudio?: (url?: string | null, prompt?: string | null, text?: string | null) => void;
+  campaignChatIncoming?: { images: string[]; prompt: string } | null;
+  clearCampaignChatIncoming?: () => void;
 }
 
 // -----------------------------------------------------------------------
 // Component
 // -----------------------------------------------------------------------
-export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps) {
+export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, clearCampaignChatIncoming }: CampaignStudioProps) {
   const { token, currentTeam } = useAuth()
   // File state
   const [files, setFiles] = useState<UploadedFile[]>([])
@@ -88,6 +92,9 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
   const [isChatLoading, setIsChatLoading] = useState(false)
   const [useSearch, setUseSearch] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
+
+  // Chat attachments state
+  const [chatAttachedImages, setChatAttachedImages] = useState<string[]>([])
 
   // -----------------------------------------------------------------------
   // File helpers
@@ -196,15 +203,55 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
     a.click()
   }
 
+  // Load conversation history on project select
+  useEffect(() => {
+    if (!project?.id) {
+      setChatMessages([])
+      return
+    }
+    const fetchHistory = async () => {
+      try {
+        const headers: Record<string, string> = {}
+        if (token) headers['Authorization'] = `Bearer ${token}`
+        
+        const res = await fetch(`/campaign/chat/history?project_id=${project.id}`, { headers })
+        if (res.ok) {
+          const data = await res.json()
+          setChatMessages(data)
+          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+        }
+      } catch (err) {
+        console.error('Failed to load chat history:', err)
+      }
+    }
+    fetchHistory()
+  }, [project?.id, token])
+
+  // Bridge Listener: Trigger feedback from CreativeStudio
+  useEffect(() => {
+    if (campaignChatIncoming) {
+      setMode('chatbot')
+      setChatAttachedImages(campaignChatIncoming.images)
+      setChatInput(campaignChatIncoming.prompt)
+      clearCampaignChatIncoming?.()
+    }
+  }, [campaignChatIncoming, clearCampaignChatIncoming])
+
   // -----------------------------------------------------------------------
   // Chatbot logic
   // -----------------------------------------------------------------------
-  const handleChatSubmit = async (e?: React.FormEvent) => {
+  const handleChatSubmit = async (e?: React.FormEvent, overrideMsg?: string, overrideImages?: string[]) => {
     e?.preventDefault()
-    if (!chatInput.trim() || isChatLoading) return
-    const userMsg = chatInput.trim()
+    const finalMsg = overrideMsg !== undefined ? overrideMsg : chatInput.trim()
+    const finalImages = overrideImages !== undefined ? overrideImages : chatAttachedImages
+    
+    if (!finalMsg && finalImages.length === 0) return
+    if (isChatLoading) return
+
     setChatInput('')
-    const newMsgs: ChatMessage[] = [...chatMessages, { role: 'user', content: userMsg }]
+    setChatAttachedImages([])
+
+    const newMsgs: ChatMessage[] = [...chatMessages, { role: 'user', content: finalMsg, images: finalImages }]
     setChatMessages(newMsgs)
     setIsChatLoading(true)
 
@@ -225,14 +272,19 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
     }
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
       const res = await fetch('/campaign/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           session_id: sessionId,
-          message: userMsg,
-          history: chatMessages,
-          google_search: useSearch
+          message: finalMsg,
+          history: chatMessages.map(m => ({ role: m.role, content: m.content })),
+          google_search: useSearch,
+          project_id: project?.id || null,
+          images: finalImages
         })
       })
       if (!res.ok) throw new Error('Chat failed')
@@ -250,7 +302,7 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
   const isGenImgs = stage === 'generating_images'
 
   return (
-    <div className="flex-1 flex overflow-hidden bg-surface-container-lowest">
+    <div className="flex-1 flex overflow-hidden bg-surface-container-lowest h-full min-h-0">
 
       {/* ── Left: Config Panel ──────────────────────────────────────── */}
       <div className="w-[380px] flex flex-col border-r border-white/5 bg-surface-container shrink-0 overflow-y-auto custom-scrollbar">
@@ -406,7 +458,7 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
       </div>
 
       {/* ── Right: Results or Chat ─────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
 
         {mode === 'multi-agent' ? (
           <>
@@ -588,13 +640,13 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
           </>
         ) : (
           /* ── Chatbot UI ── */
-          <div className="flex-1 flex flex-col bg-surface-container-lowest">
+          <div className="flex-1 flex flex-col bg-surface-container-lowest overflow-hidden" style={{minHeight: 0}}>
             <div className="h-16 border-b border-white/5 flex items-center px-6 shrink-0 bg-surface-container/50 backdrop-blur-md">
               <MessageSquare size={18} className="text-primary mr-2" />
               <h2 className="text-lg font-bold">Knowledge Chatbot</h2>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+            <div className="chat-scroll-area p-6 space-y-6 custom-scrollbar">
               {chatMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center text-on-surface-variant opacity-50">
                   <MessageSquare size={48} className="mb-4" />
@@ -604,7 +656,33 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
                 chatMessages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[75%] rounded-2xl px-5 py-3 shadow-lg ${msg.role === 'user' ? 'bg-primary text-on-primary rounded-tr-sm' : 'bg-surface-container-high text-on-surface border border-white/5 rounded-tl-sm'}`}>
-                      <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                      {msg.images && msg.images.length > 0 && (
+                        <div className={`grid ${msg.images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-2 mb-2 max-w-sm`}>
+                          {msg.images.map((img, idx) => (
+                            <img
+                              key={idx}
+                              src={img}
+                              alt={`Attached ${idx}`}
+                              className="rounded-lg max-h-40 w-full object-cover border border-white/10 shadow-sm cursor-zoom-in hover:opacity-90 transition-opacity"
+                              onClick={() => {
+                                if (onMoveToStudio) {
+                                  onMoveToStudio(img, 'AI 디자인 피드백');
+                                }
+                              }}
+                              title="Click to load in Creative Studio"
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {msg.role === 'user' ? (
+                        <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                      ) : (
+                        <div className="text-sm leading-relaxed markdown-body">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
@@ -621,21 +699,39 @@ export function CampaignStudio({ project, onMoveToStudio }: CampaignStudioProps)
             </div>
 
             <div className="p-4 border-t border-white/5 bg-surface-container/30">
-              <form onSubmit={handleChatSubmit} className="relative max-w-4xl mx-auto">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  placeholder="Type a message..."
-                  className="w-full bg-surface-container-highest border border-white/10 rounded-full pl-5 pr-12 py-3.5 text-sm focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
-                />
-                <button
-                  type="submit"
-                  disabled={!chatInput.trim() || isChatLoading}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-primary rounded-full text-on-primary hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  <Send size={16} />
-                </button>
+              <form onSubmit={(e) => handleChatSubmit(e)} className="relative max-w-4xl mx-auto bg-surface-container-highest border border-white/10 rounded-2xl p-2 transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 shadow-inner">
+                {chatAttachedImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 p-2 border-b border-white/5 mb-2">
+                    {chatAttachedImages.map((img, idx) => (
+                      <div key={idx} className="relative w-14 h-14 rounded-lg overflow-hidden border border-white/10 group shadow-md">
+                        <img src={img} className="w-full h-full object-cover" alt="Attachment" />
+                        <button
+                          type="button"
+                          onClick={() => setChatAttachedImages(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-error hover:text-red-400"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="relative flex items-center w-full">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    placeholder="Type a message..."
+                    className="w-full bg-transparent border-none pl-3 pr-12 py-2 text-sm focus:outline-none focus:ring-0 text-on-surface"
+                  />
+                  <button
+                    type="submit"
+                    disabled={(!chatInput.trim() && chatAttachedImages.length === 0) || isChatLoading}
+                    className="absolute right-2 p-2 bg-primary rounded-full text-on-primary hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                  >
+                    <Send size={16} />
+                  </button>
+                </div>
               </form>
             </div>
           </div>

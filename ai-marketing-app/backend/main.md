@@ -48,7 +48,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-API_KEY = "AIzaSyALGfrfY_2Q3s92y3-q28I_Cegm8qVQu8I"
+API_KEY = "xxxxxxxxxxx"
 client = genai.Client(api_key=API_KEY)
 
 # ─── Config ───────────────────────────────────────────────

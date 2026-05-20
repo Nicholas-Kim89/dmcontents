@@ -29,6 +29,7 @@ function AppContent() {
   const [projects, setProjects] = useState<Project[]>([])
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [studioIncoming, setStudioIncoming] = useState<{ url?: string | null; prompt?: string | null; text?: string | null } | null>(null)
+  const [campaignChatIncoming, setCampaignChatIncoming] = useState<{ images: string[]; prompt: string } | null>(null)
   const [showNewProject, setShowNewProject] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
 
@@ -172,17 +173,23 @@ function AppContent() {
               project={currentProject}
               incomingImage={studioIncoming}
               clearIncomingImage={() => setStudioIncoming(null)}
+              onTriggerFeedback={(images) => {
+                setCampaignChatIncoming({ images, prompt: '캠페인 관점에서 피드백 받기' })
+                setActiveTab('campaign')
+              }}
             />
           </div>
 
           {/* Campaign Studio */}
-          <div className={`flex-1 flex flex-col h-full ${activeTab === 'campaign' ? 'flex' : 'hidden'}`}>
+          <div className={`flex-1 flex flex-col h-full min-h-0 ${activeTab === 'campaign' ? 'flex' : 'hidden'}`}>
             <CampaignStudio
               project={currentProject}
               onMoveToStudio={(url, prompt, text) => {
                 setStudioIncoming({ url, prompt, text })
                 setActiveTab('editor')
               }}
+              campaignChatIncoming={campaignChatIncoming}
+              clearCampaignChatIncoming={() => setCampaignChatIncoming(null)}
             />
           </div>
 
