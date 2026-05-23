@@ -58,19 +58,22 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onNewProject, isAdmin
 
   return (
     <aside className={`glass border-r border-white/5 transition-all duration-300 ${isOpen ? 'w-64' : 'w-20'} flex flex-col z-50`}>
-      <div className="p-6 flex items-center gap-3">
+      <div 
+        onClick={() => setActiveTab('dashboard')}
+        className="p-6 flex items-center gap-3 cursor-pointer select-none hover:opacity-80 transition-opacity"
+      >
         <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
           <Sparkles className="text-on-primary w-6 h-6" />
         </div>
         {isOpen && (
           <div>
-            <h1 className="font-display font-bold text-xl tracking-tight leading-none">Synthetix</h1>
-            <p className="text-[10px] text-on-surface-variant font-medium tracking-widest uppercase mt-1">Enterprise AI</p>
+            <h1 className="font-display font-bold text-base tracking-tight leading-none text-white">LG화학 마케팅 AI</h1>
+            <p className="text-[9px] text-on-surface-variant font-medium tracking-tighter mt-1">마케팅 컨텐츠 생성 서비스</p>
           </div>
         )}
       </div>
 
-      {/* Team Switcher */}
+      {/* Team Switcher (팀 전환기) */}
       <div className="px-4 mb-4 relative">
         <button
           onClick={() => isOpen && setIsTeamMenuOpen(!isTeamMenuOpen)}
@@ -85,8 +88,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onNewProject, isAdmin
           {isOpen && (
             <>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-xs font-bold text-white truncate">{currentTeam?.name || 'Select Team'}</p>
-                <p className="text-[10px] text-white/40 uppercase tracking-tighter">Workspace</p>
+                <p className="text-xs font-bold text-white truncate">{currentTeam?.name || '팀 선택'}</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-tighter">워크스페이스</p>
               </div>
               <ChevronDown className={clsx("w-4 h-4 text-white/20 transition-transform", isTeamMenuOpen && "rotate-180")} />
             </>
@@ -128,7 +131,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onNewProject, isAdmin
                     <input
                       autoFocus
                       type="text"
-                      placeholder="Team name..."
+                      placeholder="팀 이름 입력..."
                       value={newTeamName}
                       onChange={(e) => setNewTeamName(e.target.value)}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
@@ -139,13 +142,13 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onNewProject, isAdmin
                         onClick={() => setIsCreatingTeam(false)}
                         className="flex-1 text-[10px] text-white/40 hover:text-white"
                       >
-                        Cancel
+                        취소
                       </button>
                       <button 
                         type="submit"
                         className="flex-1 bg-primary text-white text-[10px] py-1.5 rounded-lg font-bold"
                       >
-                        Create
+                        생성
                       </button>
                     </div>
                   </form>
@@ -155,7 +158,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onNewProject, isAdmin
                     className="w-full flex items-center gap-3 p-2 rounded-xl text-xs text-primary font-bold hover:bg-primary/10 transition-all"
                   >
                     <Plus size={14} />
-                    New Team Space
+                    새 팀 스페이스 생성
                   </button>
                 )}
               </div>
@@ -170,42 +173,42 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onNewProject, isAdmin
           className={`w-full flex items-center justify-center gap-2 bg-primary-container text-on-primary-container hover:bg-primary transition-all duration-300 font-semibold rounded-xl ${isOpen ? 'py-3' : 'p-3'}`}
         >
           <Plus size={20} />
-          {isOpen && <span>New Project</span>}
+          {isOpen && <span>새 프로젝트 생성</span>}
         </button>
       </div>
 
       <nav className="flex-1 px-3 py-2 space-y-1">
         <NavItem 
           icon={<LayoutDashboard size={20} />} 
-          label="Dashboard" 
+          label="종합 대시보드" 
           active={activeTab === 'dashboard'} 
           onClick={() => setActiveTab('dashboard')}
           isOpen={isOpen} 
         />
         <NavItem 
           icon={<PenTool size={20} />} 
-          label="Creative Studio" 
+          label="크리에이티브 스튜디오" 
           active={activeTab === 'editor'} 
           onClick={() => setActiveTab('editor')}
           isOpen={isOpen} 
         />
         <NavItem 
           icon={<Library size={20} />} 
-          label="Asset Library" 
+          label="브랜드 자산 보관함" 
           active={activeTab === 'library'} 
           onClick={() => setActiveTab('library')}
           isOpen={isOpen} 
         />
         <NavItem 
           icon={<GitMerge size={20} />} 
-          label="Campaign Pipeline" 
+          label="캠페인 파이프라인" 
           active={activeTab === 'campaign'} 
           onClick={() => setActiveTab('campaign')}
           isOpen={isOpen} 
         />
         <NavItem 
           icon={<Users size={20} />} 
-          label="Team Space" 
+          label="팀 스페이스" 
           active={activeTab === 'team'} 
           onClick={() => setActiveTab('team')}
           isOpen={isOpen} 
@@ -213,7 +216,7 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onNewProject, isAdmin
         {isAdmin && (
           <NavItem 
             icon={<ShieldCheck size={20} />} 
-            label="Admin Panel" 
+            label="관리자 패널" 
             active={activeTab === 'admin'} 
             onClick={() => setActiveTab('admin')}
             isOpen={isOpen}
@@ -225,14 +228,14 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onNewProject, isAdmin
       <div className="p-3 border-t border-white/5 space-y-1">
         <NavItem 
           icon={<Settings size={20} />} 
-          label="Settings" 
+          label="환경 설정" 
           active={activeTab === 'settings'} 
           onClick={() => setActiveTab('settings')}
           isOpen={isOpen} 
         />
         <NavItem 
           icon={<HelpCircle size={20} />} 
-          label="Help Center" 
+          label="고객 및 도움말 센터" 
           active={activeTab === 'help'} 
           onClick={() => setActiveTab('help')}
           isOpen={isOpen} 

@@ -89,10 +89,10 @@ function AppContent() {
         <div className="absolute bottom-[5%] left-[10%] w-[400px] h-[400px] bg-accent/5 blur-[100px] rounded-full pointer-events-none" />
 
         <Header
-          title={activeTab === 'editor' ? 'Creative Studio' : activeTab === 'admin' ? 'Admin Panel' : 'Synthetix AI'}
+          title={activeTab === 'editor' ? '크리에이티브 스튜디오' : activeTab === 'admin' ? '관리자 패널' : 'LG화학 마케팅 AI'}
           breadcrumbs={[
-            { label: 'Project Hub' },
-            { label: currentProject ? currentProject.name : 'Overview', active: true }
+            { label: '프로젝트 허브' },
+            { label: currentProject ? currentProject.name : '개요', active: true }
           ]}
           rightSlot={
             <div className="flex items-center gap-2">
@@ -105,7 +105,9 @@ function AppContent() {
                 {user.role === 'admin' && <ShieldCheck size={12} className="text-primary" />}
               </button>
               <button onClick={logout}
-                className="p-2 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/20 rounded-xl text-white/40 hover:text-red-400 transition-all">
+                className="p-2 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/20 rounded-xl text-white/40 hover:text-red-400 transition-all"
+                title="로그아웃"
+              >
                 <LogOut size={14} />
               </button>
             </div>
@@ -123,19 +125,19 @@ function AppContent() {
                       안녕하세요, <span className="text-primary">{user.name}</span>님.
                     </h1>
                     <p className="text-on-surface-variant text-lg max-w-2xl mt-3">
-                      Synthetix AI Marketing Agent가 준비되어 있습니다.
+                      LG화학 마케팅 컨텐츠 생성 서비스가 준비되어 있습니다.
                     </p>
                   </div>
                   <div className="flex gap-4">
                     <button onClick={handleCreateProject} className="btn-primary flex items-center gap-2">
                       <Plus size={18} />
-                      New Project
+                      새 프로젝트 생성
                     </button>
                     <button 
                       onClick={() => setActiveTab('library')}
                       className="glass px-6 py-2 rounded-full font-semibold hover:bg-white/5 transition-all flex items-center gap-2"
                     >
-                      Explore Library
+                      보관함 둘러보기
                       <ArrowRight size={18} />
                     </button>
                   </div>
@@ -143,9 +145,9 @@ function AppContent() {
 
                 <section className="space-y-8">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold">Recent Projects</h2>
+                    <h2 className="text-2xl font-bold">최근 프로젝트</h2>
                     <button className="text-primary flex items-center gap-1 text-sm font-semibold hover:underline">
-                      View All <ChevronRight size={16} />
+                      전체 보기 <ChevronRight size={16} />
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

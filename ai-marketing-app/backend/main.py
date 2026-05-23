@@ -248,6 +248,10 @@ class ChatRequest(BaseModel):
     project_id: Optional[str] = None
     images: Optional[List[str]] = None
 
+class TranslateRequest(BaseModel):
+    text: str
+    target_lang: str
+
 # ─── Auth Endpoints ────────────────────────────────────────
 @app.post("/auth/register")
 async def register(req: RegisterRequest):
@@ -787,20 +791,28 @@ async def campaign_generate(
     session_id: str = Form(...),
     prompt: str = Form(...),
     project_id: Optional[str] = Form(None),
-    google_search: bool = Form(False)
+    google_search: bool = Form(False),
+    target_industry: Optional[str] = Form(None),
+    buyer_persona: Optional[str] = Form(None),
+    b2b_strategy: Optional[str] = Form(None)
 ):
     knowledge_text = campaign_sessions.get(session_id, {}).get("knowledge_text", "")
     initial_state = {
         "user_prompt": prompt, "knowledge_text": knowledge_text, "strategy": "",
         "copies": [], "image_prompts": [], "review_result": "", "retry_count": 0,
         "final_copies": [], "final_image_prompts": [], "error": None,
-        "google_search": google_search
+        "google_search": google_search,
+        "target_industry": target_industry or "Chemicals & Advanced Materials",
+        "buyer_persona": buyer_persona or "Purchasing & Procurement Manager",
+        "b2b_strategy": b2b_strategy or "Lead Generation",
+        "research_data": ""
     }
     try:
         campaign_graph = build_campaign_graph(API_KEY)
         final_state = await asyncio.wait_for(asyncio.to_thread(campaign_graph.invoke, initial_state), timeout=180)
         if final_state.get("error"):
             raise HTTPException(status_code=500, detail=final_state["error"])
+        
         return {
             "strategy": final_state.get("strategy", ""), "copies": final_state.get("final_copies", []),
             "image_prompts": final_state.get("final_image_prompts", []), "review_result": final_state.get("review_result", ""),
@@ -812,6 +824,40 @@ async def campaign_generate(
         raise
     except Exception as e:
         logger.exception("Campaign generation error")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/campaign/translate")
+async def campaign_translate(req: TranslateRequest):
+    try:
+        client = genai.Client(api_key=API_KEY)
+        lang_map = {
+            "ko": "Korean (한국어)",
+            "en": "English (영어)",
+            "zh": "Chinese (중국어 / 简体中文)",
+            "ja": "Japanese (일본어)",
+            "es": "Spanish (스페인어)"
+        }
+        target_name = lang_map.get(req.target_lang, req.target_lang)
+        
+        prompt = (
+            f"You are a professional B2B marketing translator. Translate the following B2B marketing text or campaign ad copy into {target_name}.\n"
+            "CRITICAL: Maintain the exact same markdown formatting, headers, lists, technical spec sheets, and spacing structures.\n"
+            "Keep technical B2B terms accurate, persuasive, and highly professional (e.g. LG Chem specific materials, TCO, ROI, compliance, ISCC+, PCF, etc.).\n"
+            "Only return the translated text without any conversational intro/outro or explanations.\n\n"
+            f"--- TEXT TO TRANSLATE ---\n{req.text}"
+        )
+        
+        response = await asyncio.wait_for(
+            asyncio.to_thread(
+                client.models.generate_content,
+                model="gemini-3-flash-preview", # Use extremely fast and robust gemini-3-flash-preview
+                contents=prompt
+            ),
+            timeout=45
+        )
+        return {"translated": response.text or ""}
+    except Exception as e:
+        logger.exception("Translation error")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/campaign/chat")

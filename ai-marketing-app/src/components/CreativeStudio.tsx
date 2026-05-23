@@ -165,10 +165,13 @@ export function CreativeStudio({ project, incomingImage, clearIncomingImage, onT
           return next;
         });
         setGeneratedImage(incomingImage.url)
-        if (incomingImage.prompt) setPrompt(incomingImage.prompt)
         setCompareMode(false)
         setIsEditingBase(true)
         clearCanvas()
+      }
+
+      if (incomingImage.prompt) {
+        setPrompt(incomingImage.prompt)
       }
 
       // If text is provided, add it to the canvas once fabric is ready
