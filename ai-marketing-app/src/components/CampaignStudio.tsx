@@ -24,14 +24,26 @@ const GEMINI_RATIOS = ['1:1', '16:9', '9:16', '21:9', '4:3', '3:4', '2:3', '3:2'
 const IMAGEN_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4']
 const RESOLUTIONS = ['512', '1K', '2K', '4K']
 
-const STAGE_ORDER: AgentStage[] = ['idle', 'researcher', 'planner', 'creator', 'critic', 'generating_images', 'done']
+const STAGE_ORDER: AgentStage[] = ['idle', 'researcher', 'competitor', 'keyword', 'planner', 'creator', 'critic', 'generating_images', 'done']
 
 const AGENT_SUBTASKS = {
   researcher: [
     "브랜드 지식베이스 및 업로드 문서 요약 분석",
-    "Google 실시간 웹 리서치 및 경쟁사 마케팅 동향 파악",
+    "Google 실시간 웹 리서치 및 업계 트렌드 파악",
     "B2B 타겟 산업군 동향 및 핵심 구매 요인(TCO, ESG) 매핑",
     "시장 분석 데이터 수집 및 에이전트 적재 완료"
+  ],
+  competitor: [
+    "타겟 산업군 주요 경쟁사 식별 및 포지셔닝 분석",
+    "경쟁사 광고 소재, 채널 전략 및 소구 포인트 정밀 트래킹",
+    "시장 침투를 위한 자사 제품 차별화 소구점 도출",
+    "경쟁 구도 마케팅 분석 보고서 작성 완료"
+  ],
+  keyword: [
+    "B2B 타겟 페르소나 검색 의도(Intent) 및 주요 키워드 마이닝",
+    "글로벌 B2B 정보 획득을 위한 핵심 기술/비즈니스 키워드 발굴",
+    "검색 엔진 최적화(SEO) 및 소셜 태그 전략 설계",
+    "마케팅 핵심 키워드 리스트 적재 완료"
   ],
   planner: [
     "B2B 마케팅 기획 프레임워크 및 상세 광고 전략 설계",
@@ -69,12 +81,30 @@ interface CampaignResult {
   image_prompts: string[]
   review_result: string
   retry_count: number
+  research_data?: string
+  competitor_data?: string
+  keyword_data?: string
 }
 interface GeneratedImage { prompt: string; url: string; index: number }
 
-type AgentStage = 'idle' | 'researcher' | 'planner' | 'creator' | 'critic' | 'generating_images' | 'done' | 'error'
+type AgentStage = 'idle' | 'researcher' | 'competitor' | 'keyword' | 'planner' | 'creator' | 'critic' | 'generating_images' | 'done' | 'error'
 type Mode = 'multi-agent' | 'chatbot'
 type ChatMessage = { role: 'user' | 'model', content: string, images?: string[] }
+
+const parseModelResponse = (content: string) => {
+  if (content.includes('---FOLLOW_UP_QUESTIONS---')) {
+    const parts = content.split('---FOLLOW_UP_QUESTIONS---');
+    const body = parts[0].trim();
+    const followUpPart = parts[1] || '';
+    const lines = followUpPart.split('\n');
+    const questions = lines
+      .map(l => l.trim())
+      .filter(l => /^\d+\.\s*/.test(l))
+      .map(l => l.replace(/^\d+\.\s*/, '').trim());
+    return { body, questions };
+  }
+  return { body: content, questions: [] };
+};
 
 interface CampaignStudioProps {
   project: { id: string; name: string } | null;
@@ -176,10 +206,11 @@ export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, 
   const runPipeline = async () => {
     if (!prompt.trim()) return
     setError(null); setResult(null); setImages([]); setCopiesLang('ko'); setTranslatedCopies({})
+    setSubtaskProgress(0)
+    setStage('researcher')
 
     // Upload files
     if (rawFiles.length > 0) {
-      setStage('planner')
       const fd = new FormData()
       fd.append('session_id', sessionId)
       if (currentTeam?.id) fd.append('team_id', currentTeam.id)
@@ -194,28 +225,31 @@ export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, 
       catch { setError('File upload failed.'); setStage('error'); return }
     }
 
-    // Stage transitions for UX & Subtasks
-    setSubtaskProgress(0)
-    setStage('researcher')
-
-    let currentProgress = 0
-    const intervalId = setInterval(() => {
-      currentProgress += 1
-      if (currentProgress > 15) {
-        currentProgress = 15 // Hold at final validation of Brand Critic Agent
-      }
-      setSubtaskProgress(currentProgress)
-
-      if (currentProgress < 4) {
-        setStage('researcher')
-      } else if (currentProgress < 8) {
-        setStage('planner')
-      } else if (currentProgress < 12) {
-        setStage('creator')
-      } else {
-        setStage('critic')
-      }
-    }, 2200)
+    // ── Real-time stage polling from backend ──────────────────────────────
+    // Map backend stage names to subtaskProgress midpoints (for subtask animation)
+    const STAGE_PROGRESS_MAP: Record<string, number> = {
+      researcher: 2, competitor: 6, keyword: 10, planner: 14, creator: 18, critic: 22
+    }
+    let pollActive = true
+    let lastStage = 'researcher'
+    const pollProgress = async () => {
+      if (!pollActive) return
+      try {
+        const res = await fetch(`/campaign/progress/${sessionId}`)
+        if (res.ok) {
+          const data = await res.json()
+          const backendStage = data.stage as AgentStage
+          if (backendStage && backendStage !== 'idle' && backendStage !== 'done' && backendStage !== lastStage) {
+            lastStage = backendStage
+            setStage(backendStage)
+            const mid = STAGE_PROGRESS_MAP[backendStage]
+            if (mid !== undefined) setSubtaskProgress(mid)
+          }
+        }
+      } catch { /* ignore poll errors */ }
+      if (pollActive) setTimeout(pollProgress, 1000)
+    }
+    setTimeout(pollProgress, 800) // start polling after 800ms delay
 
     try {
       const fd = new FormData()
@@ -228,12 +262,12 @@ export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, 
       if (project?.id) fd.append('project_id', project.id)
 
       const res = await fetch('/campaign/generate', { method: 'POST', body: fd })
-      clearInterval(intervalId) // Clear the ticking timer
+      pollActive = false // Stop polling – backend call complete
       
       if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Unknown error') }
 
       const data: CampaignResult = await res.json()
-      setSubtaskProgress(16) // Instantly complete all agent subtasks
+      setSubtaskProgress(24) // Instantly complete all agent subtasks
       setResult(data)
 
       // Now generate images from the prompts
@@ -263,7 +297,7 @@ export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, 
       setStage('done')
       setExpandedSection('images')
     } catch (e: any) {
-      clearInterval(intervalId)
+      pollActive = false
       setError(e.message); setStage('error')
     }
   }
@@ -281,9 +315,11 @@ export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, 
     
     let localProgress = 0
     if (s === 'researcher') localProgress = subtaskProgress
-    else if (s === 'planner') localProgress = subtaskProgress - 4
-    else if (s === 'creator') localProgress = subtaskProgress - 8
-    else if (s === 'critic') localProgress = subtaskProgress - 12
+    else if (s === 'competitor') localProgress = subtaskProgress - 4
+    else if (s === 'keyword') localProgress = subtaskProgress - 8
+    else if (s === 'planner') localProgress = subtaskProgress - 12
+    else if (s === 'creator') localProgress = subtaskProgress - 16
+    else if (s === 'critic') localProgress = subtaskProgress - 20
     else if (s === 'generating_images') {
       if (images.length > subIdx) return 'done'
       if (images.length === subIdx) return 'active'
@@ -440,7 +476,7 @@ export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, 
     }
   }
 
-  const isRunning = ['researcher', 'planner', 'creator', 'critic', 'generating_images'].includes(stage)
+  const isRunning = ['researcher', 'competitor', 'keyword', 'planner', 'creator', 'critic', 'generating_images'].includes(stage)
   const isGenImgs = stage === 'generating_images'
 
   return (
@@ -706,7 +742,11 @@ export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, 
           <>
             {/* Stage bar (진행 단계 표시바) */}
             <div className="h-16 border-b border-white/5 flex items-center px-6 gap-3 shrink-0 bg-surface-container/50 backdrop-blur-md overflow-x-auto">
-              <AgentStep icon={<Search size={14} />} label="시장 조사 에이전트" active={stage === 'researcher'} done={['planner', 'creator', 'critic', 'generating_images', 'done'].includes(stage)} />
+              <AgentStep icon={<Search size={14} />} label="시장 조사 에이전트" active={stage === 'researcher'} done={['competitor', 'keyword', 'planner', 'creator', 'critic', 'generating_images', 'done'].includes(stage)} />
+              <ArrowRight size={14} className="text-white/20 shrink-0" />
+              <AgentStep icon={<Globe size={14} />} label="경쟁사 분석 에이전트" active={stage === 'competitor'} done={['keyword', 'planner', 'creator', 'critic', 'generating_images', 'done'].includes(stage)} />
+              <ArrowRight size={14} className="text-white/20 shrink-0" />
+              <AgentStep icon={<Search size={14} />} label="키워드 분석 에이전트" active={stage === 'keyword'} done={['planner', 'creator', 'critic', 'generating_images', 'done'].includes(stage)} />
               <ArrowRight size={14} className="text-white/20 shrink-0" />
               <AgentStep icon={<Target size={14} />} label="B2B 전략 기획 에이전트" active={stage === 'planner'} done={['creator', 'critic', 'generating_images', 'done'].includes(stage)} />
               <ArrowRight size={14} className="text-white/20 shrink-0" />
@@ -741,7 +781,9 @@ export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, 
                 <div className="space-y-3">
                   {[
                     { s: 'researcher', msg: '시장 동향 및 B2B 고객사 실시간 리서치 중...' },
-                    { s: 'planner', msg: '리서치 데이터 분석 및 B2B 기획서 설계 중...' },
+                    { s: 'competitor', msg: '주요 경쟁사 마케팅 포지셔닝 및 채널 분석 중...' },
+                    { s: 'keyword', msg: 'B2B 타겟 페르소나 맞춤형 핵심 키워드 마이닝 중...' },
+                    { s: 'planner', msg: '종합적인 B2B 캠페인 광고 기획서 설계 중...' },
                     { s: 'creator', msg: '페르소나 관점별 맞춤 광고 카피 및 이미지 컨셉 구성 중...' },
                     { s: 'critic', msg: '브랜드 가이드라인 및 B2B 규제 준수 여부 정밀 검증 중...' },
                     { s: 'generating_images', msg: `${selectedModel.name} 엔진으로 고품질 시각 콘텐츠 이미지 생성 중 (${aspectRatio} · ${resolution})...` },
@@ -888,10 +930,43 @@ export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, 
                   {/* ── Strategy ── */}
                   <ResultSection id="strategy" icon={<Target size={15} />} title="B2B 캠페인 기획서 (Strategy Playbook)"
                     expanded={expandedSection === 'strategy'} onToggle={() => setExpandedSection(expandedSection === 'strategy' ? null : 'strategy')}>
-                    <div className="text-xs text-on-surface-variant leading-relaxed markdown-body">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {result.strategy}
-                      </ReactMarkdown>
+                    <div className="space-y-4">
+                      <div className="text-xs text-on-surface-variant leading-relaxed markdown-body">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {result.strategy}
+                        </ReactMarkdown>
+                      </div>
+
+                      {/* 하위 에이전트 상세 보고서 아코디언 */}
+                      {(result.research_data || result.competitor_data || result.keyword_data) && (
+                        <div className="border-t border-white/5 pt-4 space-y-2">
+                          <h4 className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 mb-1">🔍 세부 에이전트별 분석 원문 보고서</h4>
+                          
+                          {result.research_data && (
+                            <SubAccordion title="1. B2B 시장 리서치 에이전트 상세 보고서">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {result.research_data}
+                              </ReactMarkdown>
+                            </SubAccordion>
+                          )}
+
+                          {result.competitor_data && (
+                            <SubAccordion title="2. B2B 경쟁사 분석 에이전트 상세 보고서">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {result.competitor_data}
+                              </ReactMarkdown>
+                            </SubAccordion>
+                          )}
+
+                          {result.keyword_data && (
+                            <SubAccordion title="3. B2B 키워드 & SEO 분석 에이전트 상세 보고서">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {result.keyword_data}
+                              </ReactMarkdown>
+                            </SubAccordion>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </ResultSection>
 
@@ -1004,40 +1079,68 @@ export function CampaignStudio({ project, onMoveToStudio, campaignChatIncoming, 
                   <p>업로드하신 사내 문서 및 브랜드 지식 자산에 관해 마케팅 활용 방안이나 핵심 스펙을 1:1로 자유롭게 질문해 보세요.</p>
                 </div>
               ) : (
-                chatMessages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] rounded-2xl px-5 py-3 shadow-lg ${msg.role === 'user' ? 'bg-primary text-on-primary rounded-tr-sm' : 'bg-surface-container-high text-on-surface border border-white/5 rounded-tl-sm'}`}>
-                      {msg.images && msg.images.length > 0 && (
-                        <div className={`grid ${msg.images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-2 mb-2 max-w-sm`}>
-                          {msg.images.map((img, idx) => (
-                            <img
-                              key={idx}
-                              src={img}
-                              alt={`Attached ${idx}`}
-                              className="rounded-lg max-h-40 w-full object-cover border border-white/10 shadow-sm cursor-zoom-in hover:opacity-90 transition-opacity"
-                              onClick={() => {
-                                if (onMoveToStudio) {
-                                  onMoveToStudio(img, 'AI 디자인 피드백');
-                                }
-                              }}
-                              title="Click to load in Creative Studio"
-                              style={{ cursor: 'pointer' }}
-                            />
-                          ))}
+                chatMessages.map((msg, i) => {
+                  const isModel = msg.role === 'model';
+                  const { body, questions } = isModel ? parseModelResponse(msg.content) : { body: msg.content, questions: [] };
+
+                  return (
+                    <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} space-y-2`}>
+                      <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[75%] rounded-2xl px-5 py-3 shadow-lg ${msg.role === 'user' ? 'bg-primary text-on-primary rounded-tr-sm' : 'bg-surface-container-high text-on-surface border border-white/5 rounded-tl-sm'}`}>
+                          {msg.images && msg.images.length > 0 && (
+                            <div className={`grid ${msg.images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-2 mb-2 max-w-sm`}>
+                              {msg.images.map((img, idx) => (
+                                <img
+                                  key={idx}
+                                  src={img}
+                                  alt={`Attached ${idx}`}
+                                  className="rounded-lg max-h-40 w-full object-cover border border-white/10 shadow-sm cursor-zoom-in hover:opacity-90 transition-opacity"
+                                  onClick={() => {
+                                    if (onMoveToStudio) {
+                                      onMoveToStudio(img, 'AI 디자인 피드백');
+                                    }
+                                  }}
+                                  title="Click to load in Creative Studio"
+                                  style={{ cursor: 'pointer' }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          {msg.role === 'user' ? (
+                            <div className="text-sm whitespace-pre-wrap leading-relaxed">{body}</div>
+                          ) : (
+                            <div className="text-sm leading-relaxed markdown-body">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {body}
+                              </ReactMarkdown>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {msg.role === 'user' ? (
-                        <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
-                      ) : (
-                        <div className="text-sm leading-relaxed markdown-body">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {msg.content}
-                          </ReactMarkdown>
+                      </div>
+
+                      {/* 추천 후속 질문 렌더링 */}
+                      {isModel && questions.length > 0 && (
+                        <div className="flex flex-col gap-1.5 max-w-[75%] ml-1 mt-1">
+                          <p className="text-[10px] font-black text-primary uppercase tracking-wider pl-1 mb-0.5 flex items-center gap-1">
+                            💡 마케팅 작업 고도화를 위한 추천 질문
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            {questions.map((q, qIdx) => (
+                              <button
+                                key={qIdx}
+                                type="button"
+                                onClick={() => setChatInput(q)}
+                                className="text-left text-xs bg-primary/5 hover:bg-primary/10 border border-primary/20 hover:border-primary/40 rounded-xl px-4 py-2.5 text-on-surface transition-all duration-200 cursor-pointer shadow-sm hover:translate-x-1"
+                              >
+                                {q}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
               {isChatLoading && (
                 <div className="flex justify-start">
@@ -1156,6 +1259,30 @@ function ResultSection({ id, icon, title, expanded, onToggle, children }: {
         {expanded && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <div className="px-5 pb-5">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function SubAccordion({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="border border-white/5 rounded-xl bg-surface-container-lowest overflow-hidden mt-3 shadow-inner">
+      <button onClick={() => setOpen(!open)} type="button"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left">
+        <span className="text-xs font-bold text-on-surface flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" /> {title}
+        </span>
+        {open ? <ChevronUp size={13} className="text-on-surface-variant" /> : <ChevronDown size={13} className="text-on-surface-variant" />}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="px-4 pb-4 pt-1.5 text-xs text-on-surface-variant leading-relaxed markdown-body border-t border-white/5 bg-surface-container-high/20">
+              {children}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

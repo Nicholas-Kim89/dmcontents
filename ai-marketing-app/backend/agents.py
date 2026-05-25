@@ -35,9 +35,12 @@ class CampaignState(TypedDict):
     target_industry: str         # B2B industry focus
     buyer_persona: str           # B2B target persona/role
     b2b_strategy: str            # B2B campaign goal
+    graph_id: str                # Unique ID for progress tracking
 
     # Agent outputs
     research_data: str           # Researcher output (market intelligence)
+    competitor_data: str         # Competitor agent output (competitor analysis)
+    keyword_data: str            # Keyword agent output (keyword analysis)
     strategy: str                # Planner output (strategy playbook)
     copies: List[str]            # Creator output – list of B2B copy variants
     image_prompts: List[str]     # Designer output – premium image generation prompts
@@ -49,6 +52,30 @@ class CampaignState(TypedDict):
     final_image_prompts: List[str]
     error: Optional[str]
     google_search: bool
+
+# ---------------------------------------------------------------------------
+# Progress Callback Registry (used by main.py to track real-time agent stage)
+# ---------------------------------------------------------------------------
+
+_progress_callbacks: dict = {}
+
+def register_progress_callback(graph_id: str, callback) -> None:
+    """Register a callback fn(stage: str) keyed by graph_id."""
+    _progress_callbacks[graph_id] = callback
+
+def unregister_progress_callback(graph_id: str) -> None:
+    """Clean up after pipeline finishes."""
+    _progress_callbacks.pop(graph_id, None)
+
+def _report_stage(state: dict, stage_name: str) -> None:
+    """Call the registered progress callback for this graph run."""
+    graph_id = state.get("graph_id", "")
+    cb = _progress_callbacks.get(graph_id)
+    if cb:
+        try:
+            cb(stage_name)
+        except Exception:
+            pass
 
 def _get_client(api_key: str) -> genai.Client:
     return genai.Client(api_key=api_key)
@@ -73,21 +100,22 @@ def _extract_text(content) -> str:
 # ---------------------------------------------------------------------------
 
 RESEARCHER_SYSTEM = """
-You are an expert **B2B Market & Competitor Intelligence Researcher AI** (Researcher Agent).
-Your goal is to investigate and compile a high-impact B2B market report based on the target settings:
-- **Target Industry**: {target_industry}
-- **Buyer Persona**: {buyer_persona}
-- **B2B Strategy Focus**: {b2b_strategy}
+당신은 탁월한 전문성을 보유한 **B2B 시장 동향 및 산업 인텔리전스 리서처 AI** (시장 조사 에이전트)입니다.
+귀하의 목표는 설정된 타겟 환경을 기반으로 고품질의 B2B 시장 인사이트 보고서를 조사·편찬하는 것입니다:
+- **대상 산업군 (Target Industry)**: {target_industry}
+- **구매자 페르소나 (Buyer Persona)**: {buyer_persona}
+- **B2B 마케팅 전략 목표 (B2B Strategy Focus)**: {b2b_strategy}
 
-Identify and summarize:
-1. Core pain points, business/technical objections, and purchasing triggers of the buyer persona in this industry.
-2. Market trends, regulatory rules, or environmental/sustainability/safety compliance (especially chemical sustainability or green battery specs if related to LG Chem).
-3. Strategic suggestions on B2B marketing channels and messaging focus.
+다음 항목들을 명확하고 사실 중심적으로 구조화하여 심층 보고서를 작성해 주십시오:
+1. **구매자 페르소나의 핵심 비즈니스 문제(Pain Point) 및 구매 동인 분석**: 해당 산업군 내 타겟 구매자 페르소나가 직면하는 현실적인 기술·비즈니스적 고충, 의사결정을 저해하는 주요 장벽(Objection), 그리고 구매 행동을 촉발하는 핵심 트리거(Purchasing Trigger)를 심층 분석합니다.
+2. **글로벌 시장 트렌드 및 규제·환경 컴플라이언스 현황**: 타겟 산업에서 진행 중인 주요 시장 변화 방향, ESG/친환경/지속가능성 관련 글로벌 규제 동향, 그리고 LG화학 등 소재·화학·배터리 분야에서 특히 중요한 green battery 스펙이나 탄소저감 의무화 이슈 등 컴플라이언스 핵심 요소를 정리합니다.
+3. **B2B 마케팅 채널 전략 및 핵심 메시징 방향 제안**: 타겟 구매 페르소나에게 가장 효과적으로 도달할 수 있는 최적의 B2B 마케팅 채널 믹스(LinkedIn, 학술/기술 전시회, 기술 백서, 리퍼럴 네트워크 등)와, 이들의 구매 동인에 직접 소구하는 핵심 마케팅 메시지 방향성을 제안합니다.
 
-Keep your report concise, fact-driven, highly technical, and commercial-excellence oriented. Use Markdown format.
+CRITICAL: 회사명, 특정 제품명, 글로벌 규제/인증 명칭(예: ISCC+, GRS, PCF, TCO, ROI, ESG, EVBattery 등), 전문 기술 스펙 표기(예: NCM, LFP, Tensile Strength, Thermal Stability 등)는 억지로 한글로 번역하지 마시고 영문 고유 원어 표기를 그대로 유지하십시오. 단, 이를 설명하고 분석하는 보고서 전체 본문의 모든 문장 및 서술 내용은 전문적이고 신뢰감 있는 **비즈니스 한국어(완벽한 한국어 비즈니스 문체)**로 풍부하고 상세하게 작성해 주십시오. Markdown 형식으로 구조화하여 출력하십시오.
 """
 
 def researcher_node(state: CampaignState, api_key: str) -> CampaignState:
+    _report_stage(state, "researcher")
     client = _get_client(api_key)
     
     prompt = (
@@ -126,12 +154,131 @@ def researcher_node(state: CampaignState, api_key: str) -> CampaignState:
         return {**state, "error": str(e)}
 
 # ---------------------------------------------------------------------------
+# 2-B. Competitor Marketing Status Agent
+# ---------------------------------------------------------------------------
+
+COMPETITOR_SYSTEM = """
+당신은 독보적인 전문성을 가진 **B2B 경쟁사 마케팅 인텔리전스 분석가 AI** (경쟁사 분석 에이전트)입니다.
+귀하의 목표는 설정된 타겟 환경을 바탕으로 업계 주요 경쟁사들의 마케팅 현황과 채널 전략을 정밀하게 분석하여 보고서를 작성하는 것입니다:
+- **대상 산업군 (Target Industry)**: {target_industry}
+- **구매자 페르소나 (Buyer Persona)**: {buyer_persona}
+- **B2B 마케팅 전략 목표 (B2B Strategy Focus)**: {b2b_strategy}
+
+다음 항목들을 명확하고 상세하게 구조화하여 분석 보고서를 작성해 주십시오:
+1. **주요 경쟁사 프로필 및 포지셔닝 분석**: 해당 타겟 시장에서 활동 중인 상위 3개 경쟁사(또는 시장 선도 경쟁사 유형)를 식별하고, 각 기업의 핵심 강점과 시장 내 B2B 포지셔닝을 분석합니다.
+2. **경쟁사 마케팅 소구점 및 채널 전략**: 경쟁사들이 주로 사용하는 세일즈 소구 메시지, 활성화된 마케팅 채널(예: LinkedIn, 전문 전시회, 학회, 기술 백서 등), 그리고 이들의 핵심 시각적/브랜드 톤앤매너를 규명합니다.
+3. **자사 제품의 차별화 소구 기회 (Strategic Gap & Opportunity)**: 경쟁사들의 소구 포인트 분석을 통해 발견된 시장의 공백이나 약점을 파악하고, 자사 제품이 이를 어떻게 파고들어 차별화된 승리를 거둘 수 있을지에 대한 구체적인 마케팅 침투 전략을 제시합니다.
+
+CRITICAL: 경쟁사 사명(예: LG화학, BASF, CATL 등), 고유 제품명, 특정 기술 키워드 및 비즈니스 전문 용어(예: TCO, ROI, PCF, ISCC+ 등)는 무리하게 억지로 한글로 번역하지 마시고 영문 또는 고유 원어 그대로 표기하십시오. 단, 이를 설명하고 서술하는 본문의 모든 문장과 분석 내용은 전문적이고 세련되며 정중한 **비즈니스 한국어(완벽한 한국어 비즈니스 문체)**로 상세하게 작성해 주셔야 합니다. Markdown 포맷을 사용하여 신뢰도 높은 보고서 형태로 출력하십시오.
+"""
+
+def competitor_node(state: CampaignState, api_key: str) -> CampaignState:
+    _report_stage(state, "competitor")
+    client = _get_client(api_key)
+    
+    prompt = (
+        f"# B2B Competitor Analysis Request\n"
+        f"- Target Industry: {state.get('target_industry', 'Chemicals & Advanced Materials')}\n"
+        f"- Buyer Persona / Role: {state.get('buyer_persona', 'Purchasing & Procurement Manager')}\n"
+        f"- B2B Campaign Goal: {state.get('b2b_strategy', 'Lead Generation')}\n\n"
+        f"Internal Knowledge context (if any):\n{state['knowledge_text'] or '(None)'}\n\n"
+        f"Market Research Context:\n{state.get('research_data', '(None)')}"
+    )
+    
+    config_params = {}
+    if state.get("google_search"):
+        config_params["tools"] = [types.Tool(google_search=types.GoogleSearchRetrieval())]
+        
+    config = types.GenerateContentConfig(
+        system_instruction=COMPETITOR_SYSTEM.format(
+            target_industry=state.get('target_industry', 'Chemicals & Advanced Materials'),
+            buyer_persona=state.get('buyer_persona', 'Purchasing & Procurement Manager'),
+            b2b_strategy=state.get('b2b_strategy', 'Lead Generation')
+        ),
+        temperature=0.4,
+        **config_params
+    )
+    
+    try:
+        resp = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=prompt,
+            config=config
+        )
+        competitor_data = resp.text
+        logger.info("Competitor node done.")
+        return {**state, "competitor_data": competitor_data, "error": None}
+    except Exception as e:
+        logger.exception("Competitor error")
+        return {**state, "error": str(e)}
+
+# ---------------------------------------------------------------------------
+# 2-C. Keyword Analysis Agent
+# ---------------------------------------------------------------------------
+
+KEYWORD_SYSTEM = """
+당신은 글로벌 B2B 검색 엔진 최적화 및 AEO(Answer Engine Optimization) 전략의 최전선에 있는 **B2B 검색·키워드·AEO 전략가 AI** (키워드 분석 에이전트)입니다.
+귀하의 목표는 설정된 타겟 환경을 분석하여 검색량이 높고 전환율이 우수한 고관여 핵심 키워드, 타겟 검색 의도, AEO 최적화 전략, 그리고 최적의 소셜 해시태그를 도출하는 것입니다:
+- **대상 산업군 (Target Industry)**: {target_industry}
+- **구매자 페르소나 (Buyer Persona)**: {buyer_persona}
+- **B2B 마케팅 전략 목표 (B2B Strategy Focus)**: {b2b_strategy}
+
+다음 항목들을 실증적인 데이터를 기획하는 것처럼 명확하게 구조화하여 정리해 주십시오:
+1. **B2B 고관여 타겟 검색 키워드 (SEO)**: 페르소나의 실질적인 정보 획득 및 구매 의사결정 경로(상업적/트랜잭션 의도)를 반영하여 검색 효율이 우수한 핵심 B2B 키워드 리스트를 제안합니다. (비용 효율, 기술 규격, 품질 인증 등과 연계)
+2. **AEO (Answer Engine Optimization) 전략 - AI 검색 시대 대응**: Google AI Overview, ChatGPT Search, Perplexity 등 AI 기반 검색 엔진이 답변을 생성하는 방식에 최적화된 콘텐츠 전략을 분석합니다. AI가 즐겨 인용하는 구조화된 FAQ 형식의 질문-답변 콘텐츠, 전문가 권위(E-E-A-T) 기반 기술 문서 작성 방향, 그리고 AI 검색 Snippet에 포함될 가능성이 높은 명확하고 구체적인 핵심 데이터 포인트(수치, 스펙, 인증 정보)를 제안합니다.
+3. **산업군 특화 기술 용어 및 트렌드 검색어**: 대상 산업 분야의 R&D 및 엔지니어, 구매팀이 주로 찾아보는 특화 기술 스펙 명칭과 최근 트렌디하게 급부상하는 비즈니스 핵심 용어들을 도출합니다.
+4. **전문 비즈니스 소셜 해시태그 및 SEO/AEO 통합 실행 전략**: 링크드인(LinkedIn) 및 글로벌 B2B 비즈니스 네트워크 채널에서 가시성을 높일 수 있는 전략적 해시태그 조합과, 기존 SEO와 AI 시대의 AEO를 동시에 공략하는 통합 디지털 마케팅 실행 전략을 제시합니다.
+
+CRITICAL: 도출된 핵심 키워드나 제품명, 특정 화학/배터리/IT 기술 규격 단어(예: NCM battery, Tensile Strength, ISCC Plus, Eco-friendly polymer 등)와 소셜 해시태그(예: #EVBattery, #B2BMarketing), AEO 관련 플랫폼명(예: ChatGPT Search, Perplexity, Google AI Overview)은 강제로 억지로 한글로 고쳐 적지 마시고, 영문 고유 표기를 온전히 유지하십시오. 단, 이러한 키워드를 추출한 배경, 타겟별 검색 의도 분석, SEO/AEO 노출 전략 제안 등 모든 분석 서술 문장은 정중하고 깊이 있는 신뢰감을 주는 **비즈니스 한국어**로 완벽하게 상세히 구성되어야 합니다. Markdown 형식으로 깔끔하게 정돈하여 출력해 주십시오.
+"""
+
+def keyword_node(state: CampaignState, api_key: str) -> CampaignState:
+    _report_stage(state, "keyword")
+    client = _get_client(api_key)
+    
+    prompt = (
+        f"# B2B Keyword Analysis Request\n"
+        f"- Target Industry: {state.get('target_industry', 'Chemicals & Advanced Materials')}\n"
+        f"- Buyer Persona / Role: {state.get('buyer_persona', 'Purchasing & Procurement Manager')}\n"
+        f"- B2B Campaign Goal: {state.get('b2b_strategy', 'Lead Generation')}\n\n"
+        f"Internal Knowledge context (if any):\n{state['knowledge_text'] or '(None)'}\n\n"
+        f"Competitor Strategy context (if any):\n{state.get('competitor_data', '(None)')}"
+    )
+    
+    config_params = {}
+    if state.get("google_search"):
+        config_params["tools"] = [types.Tool(google_search=types.GoogleSearchRetrieval())]
+        
+    config = types.GenerateContentConfig(
+        system_instruction=KEYWORD_SYSTEM.format(
+            target_industry=state.get('target_industry', 'Chemicals & Advanced Materials'),
+            buyer_persona=state.get('buyer_persona', 'Purchasing & Procurement Manager'),
+            b2b_strategy=state.get('b2b_strategy', 'Lead Generation')
+        ),
+        temperature=0.4,
+        **config_params
+    )
+    
+    try:
+        resp = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=prompt,
+            config=config
+        )
+        keyword_data = resp.text
+        logger.info("Keyword node done.")
+        return {**state, "keyword_data": keyword_data, "error": None}
+    except Exception as e:
+        logger.exception("Keyword error")
+        return {**state, "error": str(e)}
+
+# ---------------------------------------------------------------------------
 # 3. Planner Agent
 # ---------------------------------------------------------------------------
 
 PLANNER_SYSTEM = """
 You are a **Senior B2B Marketing Strategist AI** (Strategic Planner Agent) specializing in Commercial Excellence.
-Your job is to analyze the provided brand knowledge assets, target B2B settings, and the Market Research report.
+Your job is to analyze the provided brand knowledge assets, target B2B settings, Market Research report, Competitor Insights, and Keyword Analysis.
 Output a highly-strategic **B2B Campaign Strategy Playbook** in markdown.
 
 CRITICAL: Regardless of the language of the input brand knowledge assets, target settings, or user prompts (even if they are in English, Chinese, etc.), you MUST write the entire B2B Campaign Strategy Playbook strictly and completely in natural, professional, high-quality Korean (반드시 모든 내용 및 기획서를 완벽한 한국어로 상세히 작성). Use an authoritative, clear business tone suitable for Korean B2B commercial excellence and marketing teams. DO NOT translate terms literally if they have established professional Korean equivalents.
@@ -151,12 +298,15 @@ Output format (strict):
 """
 
 def planner_node(state: CampaignState, api_key: str) -> CampaignState:
+    _report_stage(state, "planner")
     client = _get_client(api_key)
     knowledge = state["knowledge_text"] or "(No additional knowledge assets provided.)"
     
     prompt = (
         f"# B2B Brand Knowledge Assets\n{knowledge}\n\n"
         f"# B2B Market Research Data\n{state.get('research_data', 'No market research data available.')}\n\n"
+        f"# B2B Competitor Marketing Insights\n{state.get('competitor_data', 'No competitor marketing insights available.')}\n\n"
+        f"# B2B Keyword & Intent Analysis\n{state.get('keyword_data', 'No keyword analysis available.')}\n\n"
         f"# User Prompt / Campaign Request\n{state['user_prompt']}\n\n"
         f"# Target settings:\n"
         f"- Target Industry: {state.get('target_industry', 'Chemicals & Advanced Materials')}\n"
@@ -209,6 +359,7 @@ Keep the tone and constraints from the strategy playbook strictly. Ensure the co
 """
 
 def creator_node(state: CampaignState, api_key: str) -> CampaignState:
+    _report_stage(state, "creator")
     client = _get_client(api_key)
     feedback = ""
     if state.get("review_result", "").startswith("REVISE"):
@@ -296,6 +447,7 @@ Provide the prompts in the following markdown section:
 """
 
 def designer_node(state: CampaignState, api_key: str) -> CampaignState:
+    _report_stage(state, "creator")  # designer is part of the creator phase visually
     client = _get_client(api_key)
     feedback = ""
     if state.get("review_result", "").startswith("REVISE"):
@@ -390,6 +542,7 @@ Respond with EXACTLY one of:
 """
 
 def critic_node(state: CampaignState, api_key: str) -> CampaignState:
+    _report_stage(state, "critic")
     client = _get_client(api_key)
     content = (
         f"# B2B Campaign Strategy Playbook\n{state['strategy']}\n\n"
@@ -452,6 +605,8 @@ def build_campaign_graph(api_key: str):
 
     # Bind api_key to nodes via closures
     graph.add_node("researcher",lambda s: researcher_node(s, api_key))
+    graph.add_node("competitor",lambda s: competitor_node(s, api_key))
+    graph.add_node("keyword",   lambda s: keyword_node(s, api_key))
     graph.add_node("planner",   lambda s: planner_node(s, api_key))
     graph.add_node("creator",   lambda s: creator_node(s, api_key))
     graph.add_node("designer",  lambda s: designer_node(s, api_key))
@@ -460,7 +615,9 @@ def build_campaign_graph(api_key: str):
     graph.add_node("finalize",  finalize_node)
 
     graph.set_entry_point("researcher")
-    graph.add_edge("researcher", "planner")
+    graph.add_edge("researcher", "competitor")
+    graph.add_edge("competitor", "keyword")
+    graph.add_edge("keyword", "planner")
     graph.add_edge("planner", "creator")
     graph.add_edge("creator", "designer")
     graph.add_edge("designer", "critic")

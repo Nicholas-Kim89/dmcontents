@@ -22,9 +22,10 @@ from email.mime.text import MIMEText
 
 from google import genai
 from google.genai import types
-from agents import build_campaign_graph, parse_file
+from agents import build_campaign_graph, parse_file, register_progress_callback, unregister_progress_callback
 
 import logging
+import threading
 
 load_dotenv()
 
@@ -39,6 +40,10 @@ logging.basicConfig(
 logger = logging.getLogger("backend")
 
 app = FastAPI()
+
+# Real-time pipeline progress tracker {session_id: stage_name}
+campaign_progress: dict = {}
+campaign_progress_lock = threading.Lock()
 
 app.add_middleware(
     CORSMiddleware,
@@ -786,6 +791,13 @@ async def campaign_upload(
         "saved_assets": saved_assets
     }
 
+@app.get("/campaign/progress/{session_id}")
+async def get_campaign_progress(session_id: str):
+    """Lightweight polling endpoint – returns current agent stage for a session."""
+    with campaign_progress_lock:
+        stage = campaign_progress.get(session_id, "idle")
+    return {"stage": stage}
+
 @app.post("/campaign/generate")
 async def campaign_generate(
     session_id: str = Form(...),
@@ -796,6 +808,19 @@ async def campaign_generate(
     buyer_persona: Optional[str] = Form(None),
     b2b_strategy: Optional[str] = Form(None)
 ):
+    import uuid as _uuid
+    graph_id = str(_uuid.uuid4())
+
+    # Register progress callback: thread-safe update to campaign_progress
+    def _on_stage(stage_name: str):
+        with campaign_progress_lock:
+            campaign_progress[session_id] = stage_name
+        logger.info(f"[Progress] session={session_id} stage={stage_name}")
+
+    register_progress_callback(graph_id, _on_stage)
+    with campaign_progress_lock:
+        campaign_progress[session_id] = "researcher"
+
     knowledge_text = campaign_sessions.get(session_id, {}).get("knowledge_text", "")
     initial_state = {
         "user_prompt": prompt, "knowledge_text": knowledge_text, "strategy": "",
@@ -805,24 +830,43 @@ async def campaign_generate(
         "target_industry": target_industry or "Chemicals & Advanced Materials",
         "buyer_persona": buyer_persona or "Purchasing & Procurement Manager",
         "b2b_strategy": b2b_strategy or "Lead Generation",
-        "research_data": ""
+        "research_data": "",
+        "competitor_data": "",
+        "keyword_data": "",
+        "graph_id": graph_id,
     }
     try:
         campaign_graph = build_campaign_graph(API_KEY)
-        final_state = await asyncio.wait_for(asyncio.to_thread(campaign_graph.invoke, initial_state), timeout=180)
+        final_state = await asyncio.wait_for(asyncio.to_thread(campaign_graph.invoke, initial_state), timeout=300)
         if final_state.get("error"):
             raise HTTPException(status_code=500, detail=final_state["error"])
         
+        with campaign_progress_lock:
+            campaign_progress[session_id] = "done"
+        unregister_progress_callback(graph_id)
+
         return {
-            "strategy": final_state.get("strategy", ""), "copies": final_state.get("final_copies", []),
-            "image_prompts": final_state.get("final_image_prompts", []), "review_result": final_state.get("review_result", ""),
+            "strategy": final_state.get("strategy", ""),
+            "copies": final_state.get("final_copies", []),
+            "image_prompts": final_state.get("final_image_prompts", []),
+            "review_result": final_state.get("review_result", ""),
             "retry_count": final_state.get("retry_count", 0),
+            "research_data": final_state.get("research_data", ""),
+            "competitor_data": final_state.get("competitor_data", ""),
+            "keyword_data": final_state.get("keyword_data", "")
         }
     except asyncio.TimeoutError:
-        raise HTTPException(status_code=504, detail="Campaign generation timed out (>3 min).")
+        unregister_progress_callback(graph_id)
+        with campaign_progress_lock:
+            campaign_progress.pop(session_id, None)
+        raise HTTPException(status_code=504, detail="Campaign generation timed out (>5 min).")
     except HTTPException:
+        unregister_progress_callback(graph_id)
         raise
     except Exception as e:
+        unregister_progress_callback(graph_id)
+        with campaign_progress_lock:
+            campaign_progress.pop(session_id, None)
         logger.exception("Campaign generation error")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -884,7 +928,12 @@ async def campaign_chat(req: ChatRequest, current_user: dict = Depends(get_curre
         "You are an AI Marketing Assistant. Use the provided Knowledge Base to answer the user's questions.\n"
         f"--- KNOWLEDGE BASE ---\n{knowledge_text}\n----------------------\n"
         "You will also receive attached design images (if provided). When the user asks for feedback on their designs or images, carefully analyze their content, aesthetics, layouts, and copy, and provide rich, professional, actionable marketing and design feedback.\n"
-        "If the answer is not in the knowledge base, answer based on your general marketing knowledge."
+        "If the answer is not in the knowledge base, answer based on your general marketing knowledge.\n\n"
+        "CRITICAL: At the very end of your response, you MUST generate exactly two follow-up marketing questions in Korean (한국어로 작성) to help the user further refine, optimize, or scale their marketing activities. "
+        "You MUST format this section exactly as follows:\n"
+        "---FOLLOW_UP_QUESTIONS---\n"
+        "1. [첫 번째 마케팅 고도화 추가 질문]\n"
+        "2. [두 번째 마케팅 고도화 추가 질문]"
     )
     
     history_contents = []
